@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-06-17T15:22:50.295869",
+  "current_price": 2553.026611328125,
+  "patterns": {
+    "support_resistance": {
+      "support": [
+        2449.043212890625,
+        2492.0078125,
+        2493.260498046875,
+        2510.700439453125,
+        2529.819091796875
+      ],
+      "resistance": [
+        2584.031494140625,
+        2679.37255859375,
+        2723.524169921875,
+        2831.619873046875,
+        2876.94677734375
+      ],
+      "nearest_support": 2529.819091796875,
+      "nearest_resistance": 2584.031494140625,
+      "current_price": 2553.026611328125
+    },
+    "trend": {
+      "short_term": "bearish",
+      "medium_term": "bullish",
+      "strength": 0.013961991918102025
+    },
+    "momentum": {
+      "rsi": 53.2043839651539,
+      "rsi_fast": 16.48786447955146,
+      "macd_histogram": -6.400328534676629,
+      "stochastic": 26.655487539853677,
+      "signals": []
+    },
+    "volume_analysis": {
+      "volume_ratio": 1.1756354764074224,
+      "above_vwap": false,
+      "signal": "normal_volume"
+    },
+    "gap_analysis": {
+      "recent_gaps": [
+        {
+          "date": "2025-05-12 07:00:00+00:00",
+          "gap_size": 0.581551750469606,
+          "direction": "up"
+        },
+        {
+          "date": "2025-05-18 20:00:00+00:00",
+          "gap_size": -2.3478368208043845,
+          "direction": "down"
+        }
+      ],
+      "last_gap": 0.012657281817589502
+    }
+  },
+  "trading_signals": {
+    "action": "hold",
+    "confidence": 0,
+    "entry_price": null,
+    "stop_loss": null,
+    "take_profit": null,
+    "reasons": []
+  },
+  "technical_summary": {
+    "rsi": 53.2043839651539,
+    "atr": 19.623256138392858,
+    "volume_ratio": 1.1756354764074224,
+    "trend": {
+      "short_term": "bearish",
+      "medium_term": "bullish",
+      "strength": 0.013961991918102025
+    }
+  }
+}

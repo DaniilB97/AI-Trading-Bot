@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETH Analysis System Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            background: linear-gradient(45deg, #00ff88, #00a8ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+        
+        .architecture {
+            display: grid;
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .layer {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .layer:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+        
+        .layer-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .layer-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #00ff88, #00a8ff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        
+        .components {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .component {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .component:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.2);
+        }
+        
+        .component-name {
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 5px;
+        }
+        
+        .component-desc {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .flow-diagram {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+        }
+        
+        .flow-container {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            min-width: 1200px;
+            justify-content: center;
+        }
+        
+        .flow-step {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 136, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .flow-step:hover {
+            transform: scale(1.1);
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+        
+        .flow-arrow {
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            position: relative;
+            animation: flow 2s infinite;
+        }
+        
+        .flow-arrow::after {
+            content: '▶';
+            position: absolute;
+            right: -10px;
+            top: -8px;
+            color: #00ff88;
+        }
+        
+        @keyframes flow {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 168, 255, 0.1));
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .tech-badge {
+            background: rgba(0, 168, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            border: 1px solid rgba(0, 168, 255, 0.5);
+        }
+        
+        .data-flow {
+            margin-top: 50px;
+            text-align: center;
+        }
+        
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .pipeline-node {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        
+        .pipeline-node:hover {
+            transform: scale(1.2);
+            background: rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.8);
+        }
+        
+        .pipeline-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00ff88, #00a8ff, #00ff88);
+            z-index: 1;
+            animation: pulse 3s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .feature-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-title {
+            font-size: 1.2em;
+            color: #00ff88;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Система анализа и предсказания ETH</h1>
+        
+        <div class="architecture">
+            <!-- Слой 1: Сбор данных -->
+            <div class="layer">
+                <div class="layer-title">
+                    <div class="layer-icon">📡</div>
+                    Слой 1: Сбор данных
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">Telegram Parser</div>
+                        <div class="component-desc">Асинхронный сбор сообщений из каналов с метриками engagement</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Price Data Collector</div>
+                        <div class="component-desc">Загрузка исторических данных ETH через yfinance API</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Technical Indicators</div>
+                        <div class="component-desc">Расчет 20+ индикаторов: RSI, MACD, Bollinger Bands</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Слой 2: Обработка и анализ -->
+            <div class="layer">
+                <div class="layer-title">
+                    <div class="layer-icon">🧠</div>
+                    Слой 2: Обработка и анализ
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">News Classifier (BERT)</div>
+                        <div class="component-desc">ML модель для оценки релевантности и влияния новостей</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Pattern Recognition</div>
+                        <div class="component-desc">Автоматическое определение графических паттернов</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Sentiment Analyzer</div>
+                        <div class="component-desc">Анализ тональности с весами ключевых слов</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Слой 3: Предсказание -->
+            <div class="layer">
+                <div class="layer-title">
+                    <div class="layer-icon">🔮</div>
+                    Слой 3: Предсказание
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">LSTM Network</div>
+                        <div class="component-desc">Обработка временных рядов технических данных</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Attention Mechanism</div>
+                        <div class="component-desc">Фокусировка на важных временных точках</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Fusion Layer</div>
+                        <div class="component-desc">Объединение технических и новостных признаков</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Слой 4: Результаты -->
+            <div class="layer">
+                <div class="layer-title">
+                    <div class="layer-icon">📊</div>
+                    Слой 4: Результаты и визуализация
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">Price Predictions</div>
+                        <div class="component-desc">Прогноз цены на 7 дней с доверительными интервалами</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Trading Signals</div>
+                        <div class="component-desc">Рекомендации: bullish/bearish/neutral с уверенностью</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Interactive Charts</div>
+                        <div class="component-desc">Plotly графики с паттернами и индикаторами</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Поток данных -->
+        <div class="flow-diagram">
+            <h2 style="text-align: center; margin-bottom: 30px;">📈 Поток обработки данных</h2>
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div>📱</div>
+                    <strong>Telegram</strong>
+                    <div style="font-size: 0.8em;">Каналы</div>
+                </div>
+                <div class="flow-arrow"></div>
+                
+                <div class="flow-step">
+                    <div>🤖</div>
+                    <strong>Parser</strong>
+                    <div style="font-size: 0.8em;">Сбор новостей</div>
+                </div>
+                <div class="flow-arrow"></div>
+                
+                <div class="flow-step">
+                    <div>🧠</div>
+                    <strong>BERT</strong>
+                    <div style="font-size: 0.8em;">Классификация</div>
+                </div>
+                <div class="flow-arrow"></div>
+                
+                <div class="flow-step">
+                    <div>🔄</div>
+                    <strong>Fusion</strong>
+                    <div style="font-size: 0.8em;">Объединение</div>
+                </div>
+                <div class="flow-arrow"></div>
+                
+                <div class="flow-step">
+                    <div>🎯</div>
+                    <strong>Neural Net</strong>
+                    <div style="font-size: 0.8em;">Предсказание</div>
+                </div>
+                <div class="flow-arrow"></div>
+                
+                <div class="flow-step">
+                    <div>📊</div>
+                    <strong>Output</strong>
+                    <div style="font-size: 0.8em;">Результаты</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Метрики системы -->
+        <h2 style="text-align: center; margin-top: 50px; margin-bottom: 30px;">⚡ Возможности системы</h2>
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-value">30+</div>
+                <div class="metric-label">Технических индикаторов</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">BERT</div>
+                <div class="metric-label">NLP модель</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">7 дней</div>
+                <div class="metric-label">Горизонт прогноза</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">Real-time</div>
+                <div class="metric-label">Обработка данных</div>
+            </div>
+        </div>
+        
+        <!-- Архитектура нейросети -->
+        <div class="data-flow">
+            <h2>🧠 Архитектура нейронной сети</h2>
+            <div class="pipeline">
+                <div class="pipeline-line"></div>
+                <div class="pipeline-node">📊</div>
+                <div class="pipeline-node">🔄</div>
+                <div class="pipeline-node">🎯</div>
+                <div class="pipeline-node">📈</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <span>Технические<br>данные</span>
+                <span>LSTM<br>слои</span>
+                <span>Attention<br>механизм</span>
+                <span>Прогноз<br>цены</span>
+            </div>
+        </div>
+        
+        <!-- Функции системы -->
+        <div class="feature-grid">
+            <div class="feature-box">
+                <div class="feature-title">
+                    📰 Анализ новостей
+                </div>
+                <ul class="feature-list">
+                    <li>Парсинг Telegram каналов в реальном времени</li>
+                    <li>BERT классификатор релевантности</li>
+                    <li>Анализ sentiment с весами ключевых слов</li>
+                    <li>Оценка потенциального влияния на цену</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <div class="feature-title">
+                    📊 Технический анализ
+                </div>
+                <ul class="feature-list">
+                    <li>20+ технических индикаторов</li>
+                    <li>Автоматическое определение паттернов</li>
+                    <li>Уровни поддержки и сопротивления</li>
+                    <li>Поиск дивергенций RSI/MACD</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <div class="feature-title">
+                    🔮 Предсказания
+                </div>
+                <ul class="feature-list">
+                    <li>Прогноз цены на 7 дней вперед</li>
+                    <li>Доверительные интервалы</li>
+                    <li>Объединение новостных и технических данных</li>
+                    <li>Attention механизм для точности</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <div class="feature-title">
+                    🎯 Рекомендации
+                </div>
+                <ul class="feature-list">
+                    <li>Торговые сигналы: bullish/bearish/neutral</li>
+                    <li>Процент уверенности в сигнале</li>
+                    <li>Детальное обоснование решения</li>
+                    <li>Анализ рисков и возможностей</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Технологический стек -->
+        <div style="margin-top: 50px;">
+            <h2 style="text-align: center;">🛠️ Технологический стек</h2>
+            <div class="tech-stack" style="justify-content: center;">
+                <span class="tech-badge">PyTorch</span>
+                <span class="tech-badge">Transformers (BERT)</span>
+                <span class="tech-badge">Telethon</span>
+                <span class="tech-badge">TA-Lib</span>
+                <span class="tech-badge">Plotly</span>
+                <span class="tech-badge">yfinance</span>
+                <span class="tech-badge">pandas</span>
+                <span class="tech-badge">scikit-learn</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Анимация при наведении
+        document.querySelectorAll('.component, .flow-step, .metric-card').forEach(el => {
+            el.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05) translateY(-2px)';
+            });
+            el.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1) translateY(0)';
+            });
+        });
+        
+        // Анимация появления элементов
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '0';
+                    entry.target.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        entry.target.style.transition = 'all 0.6s ease';
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, 100);
+                }
+            });
+        });
+        
+        document.querySelectorAll('.layer, .metric-card, .feature-box').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

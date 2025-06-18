@@ -3,6 +3,7 @@ torch>=2.0.0
 transformers>=4.30.0
 sentence-transformers>=2.2.0
 scikit-learn>=1.3.0
+hmmlearn>=0.3.0 # For Hidden Markov Models
 optuna>=3.2.0
 
 # Telegram parsing
@@ -10,13 +11,15 @@ telethon>=1.28.0
 
 # Data processing
 pandas>=2.0.0
-numpy>=1.24.0
+numpy~=1.24.0 # Pinning to a generally compatible version
 python-dateutil>=2.8.2
 nltk>=3.8.1
 
 # Financial data and technical analysis
 yfinance>=0.2.18
-TA-Lib>=0.4.25  # Note: Requires separate C library installation
+pandas-ta>=0.3.14b # For custom strategy indicators
+TA-Lib>=0.4.25  # Note: Requires separate C library installation (can be optional if pandas_ta is primary)
+Backtesting>=0.3.3 # For strategy backtesting
 
 # Visualization
 plotly>=5.14.0

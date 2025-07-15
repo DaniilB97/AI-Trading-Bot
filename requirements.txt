@@ -11,12 +11,13 @@ telethon>=1.28.0
 
 # Data processing
 pandas>=2.0.0
-numpy~=1.24.0 # Pinning to a generally compatible version
+numpy # Allow latest compatible version
 python-dateutil>=2.8.2
 nltk>=3.8.1
 
 # Financial data and technical analysis
 yfinance>=0.2.18
+python-binance>=1.0.19 # For Binance API
 pandas-ta>=0.3.14b # For custom strategy indicators
 TA-Lib>=0.4.25  # Note: Requires separate C library installation (can be optional if pandas_ta is primary)
 Backtesting>=0.3.3 # For strategy backtesting
@@ -54,3 +55,5 @@ pytest-cov>=4.0.0
 black>=23.3.0
 flake8>=6.0.0
 mypy>=1.2.0
+python-telegram-bot
+solana

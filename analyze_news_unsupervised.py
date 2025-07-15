@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt # Added
 
 # Add project root to path to allow importing project modules
 sys.path.append(str(Path(__file__).resolve().parent))
-from config_loader import config
+from main_files.config_loader import config
 
 logger = config.logger
 

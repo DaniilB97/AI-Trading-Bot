@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
 
-from config_loader import config
+from main_files.config_loader import config
 
 logger = config.logger
 

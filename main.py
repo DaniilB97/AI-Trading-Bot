@@ -12,7 +12,7 @@ import json
 # Add project root to path
 sys.path.append(str(Path(__file__).parent))
 
-from config_loader import config
+from main_files.config_loader import config
 from eth_analysis_system import ETHAnalysisSystem
 import logging
 

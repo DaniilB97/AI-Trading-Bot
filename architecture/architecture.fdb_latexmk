@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1752594238.51274 "/Users/daniilbystrov/Desktop/Programming/Programs/SWF4/architecture/architecture.tex" "architecture.pdf" "architecture" 1752594239.6537 2
-  "/Users/daniilbystrov/Desktop/Programming/Programs/SWF4/architecture/architecture.tex" 1752594191.52423 41690 f3bf3c8cc82fb92086c9b3bfe169b8b3 ""
+["pdflatex"] 1752697999.08808 "/Users/daniilbystrov/Desktop/Programming/Programs/SWF4/architecture/architecture.tex" "architecture.pdf" "architecture" 1752698000.03362 2
+  "/Users/daniilbystrov/Desktop/Programming/Programs/SWF4/architecture/architecture.tex" 1752697997.82187 41690 f3bf3c8cc82fb92086c9b3bfe169b8b3 ""
   "/Users/daniilbystrov/Library/texlive/2025/texmf-var/fonts/tfm/lh/lh-t2a/labx1095.tfm" 1752591888.99123 3336 216c27338cb0f11f0d2908d69ce3de23 ""
   "/Users/daniilbystrov/Library/texlive/2025/texmf-var/fonts/tfm/lh/lh-t2a/labx1200.tfm" 1751299830.50347 3308 eee81981029f67083258db36df06e523 ""
   "/Users/daniilbystrov/Library/texlive/2025/texmf-var/fonts/tfm/lh/lh-t2a/labx1440.tfm" 1751299828.44364 3304 6a543c07045572737981351171e0505e ""
@@ -213,10 +213,10 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1751299426 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1751299328 3345736 ab841bb70d6109875a6a6f78382c6177 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "architecture.aux" 1752594239.52427 9095 ba67e5a9fbffbb080290ce3d537f245f "pdflatex"
-  "architecture.out" 1752594239.52537 11442 5921f50fa6a85bb8e7876b85c15c2142 "pdflatex"
-  "architecture.tex" 1752594191.52423 41690 f3bf3c8cc82fb92086c9b3bfe169b8b3 ""
-  "architecture.toc" 1752594239.52583 5325 921963e283624327c185508836d9cd89 "pdflatex"
+  "architecture.aux" 1752697999.92295 9095 ba67e5a9fbffbb080290ce3d537f245f "pdflatex"
+  "architecture.out" 1752697999.92415 11442 5921f50fa6a85bb8e7876b85c15c2142 "pdflatex"
+  "architecture.tex" 1752697997.82187 41690 f3bf3c8cc82fb92086c9b3bfe169b8b3 ""
+  "architecture.toc" 1752697999.92439 5325 921963e283624327c185508836d9cd89 "pdflatex"
   (generated)
   "architecture.aux"
   "architecture.log"

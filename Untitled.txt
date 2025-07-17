@@ -1,0 +1,440 @@
+FOR NAZAR 
+
+
+
+
+# 🤖 AI Trading Bot - Разбивка проекта на задачи
+
+## 📋 Общая структура проекта (12 месяцев)
+
+### 🎯 **Фаза 1: Базовая архитектура и инфраструктура (Месяцы 1-3)**
+
+### 🧠 **Фаза 2: AI/ML ядро и торговые алгоритмы (Месяцы 4-7)**
+
+### 👁️ **Фаза 3: Computer Vision и альтернативные данные (Месяцы 8-10)**
+
+### 🚀 **Фаза 4: Интеграция, тестирование и развертывание (Месяцы 11-12)**
+
+---
+
+## 🎯 ФАЗА 1: Базовая архитектура (Месяцы 1-3)
+
+### 🏗️ **T1.1 - Backend Infrastructure (Анна)**
+
+#### **T1.1.1 Настройка Supabase (Неделя 1)**
+
+- [ ] Создать Supabase проект
+- [ ] Настроить PostgreSQL схему для торговых данных
+- [ ] Настроить Row Level Security (RLS)
+- [ ] Создать базовые таблицы: users, portfolios, trades, market_data
+- [ ] Настроить real-time subscriptions
+- [ ] Создать backup стратегию
+
+#### **T1.1.2 Capital.com API интеграция (Недели 2-3)**
+
+- [ ] Изучить Capital.com API документацию
+- [ ] Создать authentication модуль
+- [ ] Реализовать market data получение
+- [ ] Реализовать order execution функции
+- [ ] Создать error handling и retry logic
+- [ ] Добавить rate limiting protection
+- [ ] Написать unit tests
+
+#### **T1.1.3 FastAPI Backend (Недели 4-5)**
+
+- [ ] Создать FastAPI приложение
+- [ ] Настроить dependency injection
+- [ ] Создать REST API endpoints (см. Приложение B)
+- [ ] Реализовать WebSocket для real-time данных
+- [ ] Добавить authentication middleware
+- [ ] Создать API documentation (Swagger)
+- [ ] Настроить CORS и security headers
+
+#### **T1.1.4 Database Design (Недели 6-7)**
+
+- [ ] Оптимизировать PostgreSQL для time-series данных
+- [ ] Создать индексы для быстрых запросов
+- [ ] Настроить connection pooling (PgBouncer)
+- [ ] Реализовать data partitioning для больших таблиц
+- [ ] Создать migration scripts
+- [ ] Настроить database monitoring
+
+#### **T1.1.5 DevOps Setup (Недели 8-10)**
+
+- [ ] Настроить Docker containers
+- [ ] Создать Kubernetes deployment configs
+- [ ] Настроить CI/CD pipeline (GitLab CI/GitHub Actions)
+- [ ] Реализовать health checks и monitoring
+- [ ] Настроить Prometheus + Grafana
+- [ ] Создать alerting system
+- [ ] Настроить log aggregation (ELK stack)
+
+#### **T1.1.6 Risk Management System (Недели 11-12)**
+
+- [ ] Реализовать VaR calculation
+- [ ] Создать position sizing (Kelly Criterion)
+- [ ] Добавить maximum drawdown monitoring
+- [ ] Реализовать stop-loss logic
+- [ ] Создать portfolio risk dashboard
+- [ ] Добавить compliance checks
+
+---
+
+### 👁️ **T1.2 - Data Infrastructure (Назар)**
+
+#### **T1.2.1 Data Collection Pipeline (Недели 1-2)**
+
+- [ ] Настроить Apache Spark для big data processing
+- [ ] Создать ETL pipeline для market data
+- [ ] Реализовать real-time data ingestion
+- [ ] Настроить data quality checks
+- [ ] Создать data catalog и metadata management
+- [ ] Добавить data lineage tracking
+
+#### **T1.2.2 Alternative Data Sources (Недели 3-4)**
+
+- [ ] Интегрировать Google Maps API
+- [ ] Настроить satellite data processing
+- [ ] Создать social media sentiment pipeline
+- [ ] Добавить macro-economic indicators (FRED API)
+- [ ] Реализовать data fusion algorithms
+- [ ] Создать data validation rules
+
+#### **T1.2.3 Data Storage Optimization (Недели 5-6)**
+
+- [ ] Настроить time-series database optimization
+- [ ] Реализовать data compression
+- [ ] Создать data archival strategy
+- [ ] Настроить hot/cold data tiering
+- [ ] Оптимизировать query performance
+- [ ] Добавить caching layer (Redis)
+
+#### **T1.2.4 Technical Indicators (Недели 7-8)**
+
+- [ ] Реализовать SMA, EMA, RSI вычисления
+- [ ] Добавить MACD, Bollinger Bands
+- [ ] Создать volatility measures (VIX, GARCH)
+- [ ] Реализовать cross-asset correlations
+- [ ] Оптимизировать real-time computation
+- [ ] Создать indicator backtesting framework
+
+---
+
+### 🤖 **T1.3 - ML Foundation (Daniil)**
+
+#### **T1.3.1 ML Environment Setup (Недели 1-2)**
+
+- [ ] Настроить PyTorch/TensorFlow environment
+- [ ] Интегрировать Ollama 3.2 для local LLM
+- [ ] Создать experiment tracking (MLflow/W&B)
+- [ ] Настроить Jupyter notebook server
+- [ ] Создать ML model versioning system
+- [ ] Настроить GPU infrastructure
+
+#### **T1.3.2 Data Preprocessing (Недели 3-4)**
+
+- [ ] Создать feature engineering pipeline
+- [ ] Реализовать data normalization
+- [ ] Добавить missing data handling
+- [ ] Создать train/validation/test splits
+- [ ] Реализовать time-series cross-validation
+- [ ] Добавить data augmentation techniques
+
+#### **T1.3.3 Basic ML Models (Недели 5-6)**
+
+- [ ] Реализовать baseline models (Linear Regression, Random Forest)
+- [ ] Создать LSTM для time-series prediction
+- [ ] Добавить ensemble methods
+- [ ] Реализовать hyperparameter tuning
+- [ ] Создать model evaluation framework
+- [ ] Добавить model interpretation (SHAP, LIME)
+
+---
+
+## 🧠 ФАЗА 2: AI/ML Ядро (Месяцы 4-7)
+
+### 🤖 **T2.1 - Reinforcement Learning Core (Daniil)**
+
+#### **T2.1.1 RL Environment (Месяц 4)**
+
+- [ ] Создать trading environment (OpenAI Gym compatible)
+- [ ] Реализовать state space representation
+- [ ] Определить action space (buy/sell/hold)
+- [ ] Создать reward function (формула 5 из документа)
+- [ ] Добавить market simulation
+- [ ] Реализовать portfolio tracking
+
+#### **T2.1.2 DQN Implementation (Месяц 5)**
+
+- [ ] Реализовать Deep Q-Network
+- [ ] Добавить experience replay buffer
+- [ ] Создать target network updates
+- [ ] Реализовать epsilon-greedy exploration
+- [ ] Добавить Double DQN improvements
+- [ ] Создать training loop
+
+#### **T2.1.3 Advanced RL Algorithms (Месяц 6)**
+
+- [ ] Реализовать PPO (Proximal Policy Optimization)
+- [ ] Добавить A3C (Asynchronous Actor-Critic)
+- [ ] Создать multi-agent RL system
+- [ ] Реализовать hierarchical RL
+- [ ] Добавить curriculum learning
+- [ ] Создать ensemble of RL agents
+
+#### **T2.1.4 RL Optimization (Месяц 7)**
+
+- [ ] Оптимизировать inference speed (<10ms)
+- [ ] Реализовать model quantization
+- [ ] Добавить continuous learning
+- [ ] Создать concept drift detection
+- [ ] Реализовать online adaptation
+- [ ] Добавить catastrophic forgetting prevention
+
+---
+
+### 🤖 **T2.2 - NLP & Sentiment Analysis (Daniil)**
+
+#### **T2.2.1 News Processing Pipeline (Месяц 4)**
+
+- [ ] Интегрировать NewsAPI, Alpha Vantage
+- [ ] Создать text preprocessing pipeline
+- [ ] Реализовать real-time news ingestion
+- [ ] Добавить news deduplication
+- [ ] Создать named entity recognition
+- [ ] Реализовать topic classification
+
+#### **T2.2.2 Sentiment Analysis Engine (Месяц 5)**
+
+- [ ] Интегрировать VADER, TextBlob
+- [ ] Fine-tune BERT для financial sentiment
+- [ ] Создать ensemble sentiment model
+- [ ] Реализовать multi-language support
+- [ ] Добавить sentiment score aggregation
+- [ ] Создать sentiment-price correlation analysis
+
+#### **T2.2.3 Ollama LLM Integration (Месяц 6)**
+
+- [ ] Настроить Ollama 3.2 server
+- [ ] Создать LLM prompt engineering для финансов
+- [ ] Реализовать financial report analysis
+- [ ] Добавить earnings call transcription analysis
+- [ ] Создать market summary generation
+- [ ] Оптимизировать local inference speed
+
+---
+
+### 🏗️ **T2.3 - Trading Strategies (Анна + Daniil)**
+
+#### **T2.3.1 Strategy Framework (Месяц 4)**
+
+- [ ] Создать base strategy class
+- [ ] Реализовать strategy orchestrator
+- [ ] Добавить strategy switching logic
+- [ ] Создать performance attribution
+- [ ] Реализовать strategy blending
+- [ ] Добавить strategy risk monitoring
+
+#### **T2.3.2 Basic Strategies (Месяц 5)**
+
+- [ ] Реализовать Momentum Strategy
+- [ ] Добавить Mean Reversion Strategy
+- [ ] Создать Pairs Trading Strategy
+- [ ] Реализовать Breakout Strategy
+- [ ] Добавить Grid Trading Strategy
+- [ ] Создать Dollar-Cost Averaging
+
+#### **T2.3.3 Advanced Strategies (Месяц 6)**
+
+- [ ] Реализовать Multi-Exchange Arbitrage (критически важно!)
+- [ ] Создать Statistical Arbitrage
+- [ ] Добавить Market Making Strategy
+- [ ] Реализовать Options Strategy
+- [ ] Создать Cross-Asset Strategy
+- [ ] Добавить Sentiment-driven Strategy
+
+#### **T2.3.4 Portfolio Optimization (Месяц 7)**
+
+- [ ] Реализовать Markowitz optimization
+- [ ] Добавить Black-Litterman model
+- [ ] Создать Kelly Criterion position sizing
+- [ ] Реализовать risk parity
+- [ ] Добавить factor-based allocation
+- [ ] Создать dynamic rebalancing
+
+---
+
+## 👁️ ФАЗА 3: Computer Vision & Alternative Data (Месяцы 8-10)
+
+### 👁️ **T3.1 - Computer Vision System (Назар)**
+
+#### **T3.1.1 Supervision Integration (Месяц 8)**
+
+- [ ] Настроить Supervision library
+- [ ] Создать chart pattern detection
+- [ ] Реализовать candlestick pattern recognition
+- [ ] Добавить support/resistance detection
+- [ ] Создать trend line identification
+- [ ] Реализовать volume profile analysis
+
+#### **T3.1.2 Advanced Chart Analysis (Месяц 9)**
+
+- [ ] Создать YOLO model для chart patterns
+- [ ] Реализовать OCR для financial documents
+- [ ] Добавить satellite image analysis
+- [ ] Создать social media image sentiment
+- [ ] Реализовать real-time video analysis
+- [ ] Добавить multi-timeframe analysis
+
+#### **T3.1.3 CV Performance Optimization (Месяц 10)**
+
+- [ ] Оптимизировать inference speed
+- [ ] Реализовать model quantization
+- [ ] Добавить edge deployment
+- [ ] Создать GPU acceleration
+- [ ] Реализовать batch processing
+- [ ] Добавить caching mechanisms
+
+---
+
+### 👁️ **T3.2 - Multi-Exchange Arbitrage (Назар + Анна)**
+
+#### **T3.2.1 Exchange Integration (Месяц 8)**
+
+- [ ] Интегрировать 15+ бирж (Tier 1-3)
+- [ ] Создать unified API wrapper
+- [ ] Реализовать authentication для всех бирж
+- [ ] Добавить rate limiting для каждой биржи
+- [ ] Создать exchange status monitoring
+- [ ] Реализовать failover mechanisms
+
+#### **T3.2.2 Arbitrage Engine (Месяц 9)**
+
+- [ ] Реализовать MultiExchangeArbitrageEngine
+- [ ] Создать opportunity detection (<100ms)
+- [ ] Добавить profit calculation с комиссиями
+- [ ] Реализовать simultaneous execution
+- [ ] Создать slippage estimation
+- [ ] Добавить position tracking
+
+#### **T3.2.3 Asset Coverage (Месяц 10)**
+
+- [ ] Добавить 300+ торговых инструментов
+- [ ] Реализовать crypto arbitrage
+- [ ] Добавить forex arbitrage via Capital.com
+- [ ] Создать commodity arbitrage
+- [ ] Реализовать index arbitrage
+- [ ] Добавить DeFi arbitrage
+
+---
+
+## 🚀 ФАЗА 4: Тестирование и Развертывание (Месяцы 11-12)
+
+### 🏗️ **T4.1 - Testing Framework (Анна)**
+
+#### **T4.1.1 Backtesting Engine (Месяц 11)**
+
+- [ ] Создать comprehensive backtesting framework
+- [ ] Реализовать historical data replay
+- [ ] Добавить transaction cost modeling
+- [ ] Создать market impact simulation
+- [ ] Реализовать slippage modeling
+- [ ] Добавить regime change testing
+
+#### **T4.1.2 Performance Metrics (Месяц 11)**
+
+- [ ] Реализовать все метрики из Таблицы 1
+- [ ] Создать Sharpe ratio calculation
+- [ ] Добавить Maximum Drawdown tracking
+- [ ] Реализовать Sortino ratio
+- [ ] Создать Calmar ratio
+- [ ] Добавить Win Rate analysis
+
+#### **T4.1.3 Live Testing (Месяц 12)**
+
+- [ ] Создать paper trading environment
+- [ ] Реализовать A/B testing framework
+- [ ] Добавить performance monitoring
+- [ ] Создать risk monitoring alerts
+- [ ] Реализовать automatic shutdown triggers
+- [ ] Добавить compliance reporting
+
+---
+
+### 🤖 **T4.2 - System Integration (Daniil)**
+
+#### **T4.2.1 ML Pipeline Integration (Месяц 11)**
+
+- [ ] Интегрировать все ML components
+- [ ] Создать model serving pipeline
+- [ ] Реализовать A/B testing для моделей
+- [ ] Добавить model performance monitoring
+- [ ] Создать automatic retraining
+- [ ] Реализовать model rollback system
+
+#### **T4.2.2 Real-time Optimization (Месяц 12)**
+
+- [ ] Оптимизировать latency <10ms
+- [ ] Реализовать memory optimization
+- [ ] Добавить GPU acceleration
+- [ ] Создать load balancing
+- [ ] Реализовать horizontal scaling
+- [ ] Добавить performance profiling
+
+---
+
+### 👁️ **T4.3 - Production Deployment (Назар)**
+
+#### **T4.3.1 Monitoring System (Месяц 11)**
+
+- [ ] Создать ArbitrageMonitor (Листинг 3)
+- [ ] Реализовать real-time dashboards
+- [ ] Добавить alert system
+- [ ] Создать performance reports
+- [ ] Реализовать system health checks
+- [ ] Добавить capacity planning
+
+#### **T4.3.2 Final Deployment (Месяц 12)**
+
+- [ ] Настроить production environment
+- [ ] Реализовать blue-green deployment
+- [ ] Добавить disaster recovery
+- [ ] Создать operational runbooks
+- [ ] Реализовать security hardening
+- [ ] Добавить compliance auditing
+
+---
+
+## 📊 Критические метрики успеха
+
+### 🎯 **Технические KPI:**
+
+- **Latency:** <100ms для арбитража, <10ms для торговых решений
+- **Availability:** 99.9% uptime
+- **Throughput:** 10,000+ price updates/second
+- **Exchange Coverage:** 15+ бирж, 300+ активов
+
+### 💰 **Финансовые KPI:**
+
+- **Годовая доходность:** >15%
+- **Sharpe Ratio:** >2.5
+- **Maximum Drawdown:** <8%
+- **Win Rate:** >65%
+
+### 🔄 **Еженедельные ретроспективы**
+
+- Обзор выполненных задач
+- Анализ блокеров
+- Планирование следующей недели
+- Code review и knowledge sharing
+
+### 🚨 **Критические зависимости**
+
+1. **Capital.com API** - блокирует торговые функции
+2. **Supabase setup** - блокирует data persistence
+3. **Exchange integrations** - блокирует арбитраж
+4. **RL environment** - блокирует AI development
+
+---
+
+_Каждая задача содержит definition of done с конкретными критериями приемки и тестирования._

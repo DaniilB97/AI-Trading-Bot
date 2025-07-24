@@ -1,18 +1,19 @@
 #!/usr/bin/env python3 # самый работающий пока что скрипт
 """
-Основной скрипт для обучения Reinforcement Learning (PPO) агента
-для торговли золотом на основе цен и новостного сентимента.
+ОБНОВЛЕННЫЙ скрипт для обучения RL агента под новый формат данных
+Поддерживает Golden Cross, готовые технические индикаторы и multi-asset данные
 """
 import gymnasium as gym
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical
 import logging
 from datetime import datetime
+from sklearn.preprocessing import StandardScaler
+import pickle
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Квантовый торговый дашборд</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js and Date Adapter -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0D1117; /* Глубокий темно-синий фон */
+            color: #c9d1d9; /* Светлый текст для контраста */
+        }
+        .glass-card {
+            background-color: rgba(13, 17, 23, 0.5); /* Полупрозрачный фон карточек */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.5); /* Подсветка акцентным цветом при наведении */
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+        /* Кастомный скроллбар для логов */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+    <div class="max-w-screen-2xl mx-auto">
+        <!-- Заголовок -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-white">Квантовый торговый дашборд</h1>
+                <p class="text-gray-400">Отслеживание сделок RL-модели в реальном времени</p>
+            </div>
+            <div id="status-indicator" class="flex items-center space-x-2">
+                <div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse"></div>
+                <span class="text-yellow-400">Подключение к API...</span>
+            </div>
+        </header>
+
+        <!-- Основные метрики -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="glass-card p-6 rounded-lg">
+                <div class="flex items-center space-x-3 mb-2">
+                    <i data-lucide="landmark" class="w-5 h-5 text-sky-400"></i>
+                    <h2 class="text-lg font-medium text-gray-300">Капитал</h2>
+                </div>
+                <p id="equity-value" class="text-3xl font-bold text-white mt-2">$0.00</p>
+            </div>
+            <div class="glass-card p-6 rounded-lg">
+                <div class="flex items-center space-x-3 mb-2">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-sky-400"></i>
+                    <h2 class="text-lg font-medium text-gray-300">P&L (Общий)</h2>
+                </div>
+                <p id="pnl-value" class="text-3xl font-bold text-white mt-2">$0.00 (0.00%)</p>
+            </div>
+            <div class="glass-card p-6 rounded-lg">
+                <div class="flex items-center space-x-3 mb-2">
+                    <i data-lucide="wallet" class="w-5 h-5 text-sky-400"></i>
+                    <h2 class="text-lg font-medium text-gray-300">Свободный кэш</h2>
+                </div>
+                <p id="cash-value" class="text-3xl font-bold text-white mt-2">$0.00</p>
+            </div>
+            <div class="glass-card p-6 rounded-lg">
+                <div class="flex items-center space-x-3 mb-2">
+                    <i data-lucide="repeat" class="w-5 h-5 text-sky-400"></i>
+                    <h2 class="text-lg font-medium text-gray-300">Всего сделок</h2>
+                </div>
+                <p id="trades-value" class="text-3xl font-bold text-white mt-2">0</p>
+            </div>
+        </div>
+        
+        <!-- Основная рабочая область -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Левая колонка: Управление и Позиции -->
+            <div class="lg:col-span-1 space-y-8">
+                <div class="glass-card p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold text-white mb-4 flex items-center"><i data-lucide="terminal" class="w-5 h-5 mr-3"></i>Панель управления</h2>
+                    <p class="text-gray-400">Управление ботом будет осуществляться через бэкенд.</p>
+                </div>
+
+                <div class="glass-card p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold text-white mb-4 flex items-center"><i data-lucide="layers" class="w-5 h-5 mr-3"></i>Открытые позиции</h2>
+                    <div id="positions-container" class="space-y-4 max-h-96 overflow-y-auto">
+                        <p class="text-gray-400">Загрузка данных...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка: График и Логи -->
+            <div class="lg:col-span-2 space-y-8">
+                <div class="glass-card p-6 rounded-lg">
+                     <h2 class="text-xl font-semibold text-white mb-4 flex items-center"><i data-lucide="line-chart" class="w-5 h-5 mr-3"></i>График цен</h2>
+                    <div class="h-96">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold text-white mb-4 flex items-center"><i data-lucide="file-text" class="w-5 h-5 mr-3"></i>Журнал событий</h2>
+                    <div id="log-container" class="bg-gray-900/50 rounded-md p-4 h-64 overflow-y-auto font-mono text-sm">
+                        <!-- Записи лога будут добавляться сюда -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Инициализация иконок ---
+        lucide.createIcons();
+        
+        // --- КОНФИГУРАЦИЯ ---
+        const API_BASE_URL = "http://localhost:8080"; // Адрес нашего будущего Python-сервера
+        const INITIAL_CASH = 10000; // Используется для расчета P&L
+
+        // --- UI ЭЛЕМЕНТЫ ---
+        const ui = {
+            equityValue: document.getElementById('equity-value'),
+            pnlValue: document.getElementById('pnl-value'),
+            cashValue: document.getElementById('cash-value'),
+            tradesValue: document.getElementById('trades-value'),
+            positionsContainer: document.getElementById('positions-container'),
+            logContainer: document.getElementById('log-container'),
+            statusIndicator: document.getElementById('status-indicator'),
+        };
+        
+        // --- НАСТРОЙКА ГРАФИКА ---
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'minute', tooltipFormat: 'PP HH:mm:ss' },
+                        ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    y: {
+                        position: 'right',
+                        ticks: { color: '#9ca3af', callback: value => '$' + value.toFixed(2) },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#1f2937',
+                        titleColor: '#e5e7eb',
+                        bodyColor: '#d1d5db',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+            }
+        });
+
+        // --- ОСНОВНЫЕ ФУНКЦИИ ---
+        function addLog(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const colors = {
+                info: 'text-gray-400',
+                buy: 'text-green-400',
+                sell: 'text-red-400',
+                decision: 'text-yellow-400',
+                error: 'text-red-500',
+                connect: 'text-sky-400'
+            };
+            const entry = document.createElement('div');
+            entry.className = `py-1 ${colors[type] || 'text-gray-400'}`;
+            entry.innerHTML = `<span class="text-gray-500">${time}</span>: ${message}`;
+            
+            // Добавляем новую запись в начало
+            ui.logContainer.insertBefore(entry, ui.logContainer.firstChild);
+            // Ограничиваем количество записей в логе
+            if (ui.logContainer.children.length > 100) {
+                ui.logContainer.removeChild(ui.logContainer.lastChild);
+            }
+        }
+
+        function updateDashboard(data) {
+            // Обновляем основные метрики
+            const equity = data.portfolio_metrics.equity;
+            const pnl = equity - INITIAL_CASH;
+            const pnlPercent = (pnl / INITIAL_CASH) * 100;
+
+            ui.equityValue.textContent = `$${equity.toFixed(2)}`;
+            ui.pnlValue.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`;
+            ui.cashValue.textContent = `$${data.portfolio_metrics.cash.toFixed(2)}`;
+            ui.tradesValue.textContent = data.portfolio_metrics.total_trades;
+            ui.pnlValue.className = `text-3xl font-bold mt-2 ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            
+            // Обновляем UI позиций
+            updatePositionsUI(data.open_positions);
+
+            // Обновляем график
+            updateChart(data.chart_data);
+        }
+        
+        function updatePositionsUI(positions) {
+            ui.positionsContainer.innerHTML = '';
+            if (!positions || positions.length === 0) {
+                ui.positionsContainer.innerHTML = '<p class="text-gray-400">Нет открытых позиций.</p>';
+                return;
+            }
+
+            positions.forEach(pos => {
+                const pnl = pos.pnl;
+                const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
+                const positionEl = document.createElement('div');
+                positionEl.className = 'bg-gray-900/70 p-4 rounded-md border border-transparent hover:border-sky-500 transition-colors';
+                positionEl.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-lg text-white">${pos.ticker}</span>
+                        <span class="text-sm ${pnlColor} font-semibold">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</span>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-2 grid grid-cols-3 gap-2">
+                        <span><strong class="font-medium text-gray-300">Размер:</strong> ${pos.size.toFixed(4)}</span>
+                        <span><strong class="font-medium text-gray-300">Вход:</strong> $${pos.entry_price.toFixed(2)}</span>
+                        <span><strong class="font-medium text-gray-300">Сейчас:</strong> $${pos.current_price.toFixed(2)}</span>
+                    </div>
+                `;
+                ui.positionsContainer.appendChild(positionEl);
+            });
+        }
+
+        function updateChart(chartData) {
+            priceChart.data.labels = chartData.labels.map(t => new Date(t));
+            
+            // Обновляем существующий датасет или создаем новый
+            let dataset = priceChart.data.datasets[0];
+            if (!dataset) {
+                const color = '#38bdf8';
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, color + '4D');
+                gradient.addColorStop(1, color + '00');
+
+                dataset = {
+                    label: 'Цена',
+                    data: [],
+                    borderColor: color,
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: true,
+                };
+                priceChart.data.datasets.push(dataset);
+            }
+            
+            dataset.data = chartData.prices;
+            priceChart.update('none');
+        }
+
+        async function fetchDataFromServer() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/state`);
+                if (!response.ok) {
+                    throw new Error(`Ошибка сети: ${response.statusText}`);
+                }
+                const data = await response.json();
+                
+                updateDashboard(data);
+
+                // Обновляем лог новыми записями с сервера
+                if(data.logs) {
+                    data.logs.forEach(log => addLog(log.message, log.type));
+                }
+
+                ui.statusIndicator.innerHTML = `<div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div><span class="text-green-400">Подключено</span>`;
+
+            } catch (error) {
+                console.error("Не удалось получить данные с сервера:", error);
+                ui.statusIndicator.innerHTML = `<div class="w-3 h-3 rounded-full bg-red-500"></div><span class="text-red-400">Ошибка API</span>`;
+                addLog(error.message, 'error');
+            }
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ---
+        addLog("Инициализация дашборда...", "info");
+        fetchDataFromServer(); // Первый запуск
+        setInterval(fetchDataFromServer, 5000); // Обновляем данные каждые 5 секунд
+    });
+</script>
+</body>
+</html>

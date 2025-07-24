@@ -7,10 +7,13 @@ import json
 import logging
 from typing import Dict, Optional, List, Any
 from datetime import datetime, timezone
+from working_sentiment_api import get_market_sentiment
 
 # --- UI & Threading Libraries ---
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
+                             QHBoxLayout, QLabel, QListWidget, QListWidgetItemCAPITAL_API_KEY=nTJnhoUFtjcTuN2J
+CAPITAL_PASSWORD=zANra3.WW.7JuZ5
+CAPITAL_IDENTIFIER=gervafrokit2112@gmail.com,
                              QPlainTextEdit, QGridLayout, QFrame)
 from PyQt6.QtCore import pyqtSignal, QObject, QThread, Qt
 from PyQt6.QtGui import QColor
@@ -192,6 +195,14 @@ class TradingWorker(QObject):
         else:
             self.log_message.emit("Недостаточно данных для подгонки scaler.", "error")
 
+    # В НАЧАЛЕ ФАЙЛА (после других импортов):
+from working_sentiment_api import get_market_sentiment
+
+# В КЛАССЕ TradingWorker, МЕТОД run_trading_cycle():
+
+class TradingWorker(QObject):
+    # ... остальные методы ...
+    
     def run_trading_cycle(self):
         """
         Выполняет один полный торговый цикл: получает данные, конструирует состояние,
@@ -215,6 +226,8 @@ class TradingWorker(QObject):
         
         df = self.create_ohlc_df(market_data['prices'])
 
+        # ====== ЗДЕСЬ ЗАМЕНИТЬ ЭТОТ БЛОК ======
+        # СТАРОЕ (УБРАТЬ):
         # --- ВАША НОВАЯ СЕКЦИЯ: Получение и обработка настроений из новостей ---
         self.log_message.emit("📰 Получение настроений из новостей...", "info")
         try:
@@ -232,6 +245,18 @@ class TradingWorker(QObject):
             live_sentiment_score = 0.0 # По умолчанию нейтральное значение при ошибке
         # --- Конец секции получения новостей ---
         
+        # НОВОЕ (ДОБАВИТЬ):
+        # --- РЕАЛЬНОЕ получение sentiment через MarketAux + Fear&Greed ---
+        self.log_message.emit("📊 Получение РЕАЛЬНОГО sentiment...", "info")
+        try:
+            live_sentiment_score = get_market_sentiment("gold")
+            self.log_message.emit(f"✅ Реальный sentiment: {live_sentiment_score:.3f}", "info")
+        except Exception as e:
+            self.log_message.emit(f"❌ Ошибка sentiment: {e}", "error")
+            live_sentiment_score = 0.0
+        # --- Конец секции реального sentiment ---
+        # ====== КОНЕЦ ЗАМЕНЫ ======
+        
         # Передаем оценку настроений в конструктор состояния
         state_vector = self.construct_state(df, position_for_epic, live_sentiment_score)
         if state_vector is None:
@@ -241,6 +266,8 @@ class TradingWorker(QObject):
         action = self.agent.select_action(state_vector)
         action_map = {0: "HOLD", 1: "BUY", 2: "SELL"}
         self.log_message.emit(f"🤖 Решение модели: {action_map[action]}", "decision")
+
+        # ... остальная логика торговли ...
 
         is_weekend = datetime.now().weekday() in [5, 6]
         if is_weekend and action in [1, 2]: # Block opening/closing on weekends
@@ -272,8 +299,8 @@ class TradingWorker(QObject):
         """
         Рассчитывает индикаторы, которые ожидает модель, и устанавливает оценку настроений.
         """
-        df.ta.rsi(length=14, append=True)
-        df.ta.stoch(k=14, d=3, smooth_k=3, append=True)
+        df.ta.rsi(length=24, append=True)
+        df.ta.stoch(k=14, d=3, smooth_k=3, append=True)2
         df.ta.cci(length=14, append=True)
         df['Price_Change_5'] = df['Close'].pct_change(periods=5)
         df['sentiment'] = sentiment_score

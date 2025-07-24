@@ -32,6 +32,24 @@
             border-color: rgba(56, 189, 248, 0.5); /* Подсветка акцентным цветом при наведении */
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
         }
+        .pnl-card {
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .pnl-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        .pnl-card:hover::before {
+            left: 100%;
+        }
         /* Кастомный скроллбар для логов */
         ::-webkit-scrollbar {
             width: 6px;
@@ -45,6 +63,27 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280;
+        }
+        /* Анимации для модального окна */
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        /* Стили для dropdown */
+        .dropdown-menu {
+            transform: translateY(-10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+        .dropdown-menu.show {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
         }
     </style>
 </head>
@@ -71,13 +110,36 @@
                 </div>
                 <p id="equity-value" class="text-3xl font-bold text-white mt-2">$0.00</p>
             </div>
-            <div class="glass-card p-6 rounded-lg">
-                <div class="flex items-center space-x-3 mb-2">
-                    <i data-lucide="trending-up" class="w-5 h-5 text-sky-400"></i>
-                    <h2 class="text-lg font-medium text-gray-300">P&L (Общий)</h2>
+            
+            <!-- 🔥 ИНТЕРАКТИВНАЯ P&L КАРТОЧКА -->
+            <div class="glass-card pnl-card p-6 rounded-lg relative" id="pnl-card">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-sky-400"></i>
+                        <h2 class="text-lg font-medium text-gray-300">P&L</h2>
+                    </div>
+                    <div class="relative">
+                        <button id="pnl-dropdown-btn" class="flex items-center space-x-1 text-xs bg-gray-700/50 hover:bg-gray-600/50 px-2 py-1 rounded transition-colors">
+                            <span id="current-period">Общий</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                        </button>
+                        <div id="pnl-dropdown" class="dropdown-menu absolute right-0 top-8 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-32">
+                            <div class="py-1">
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="total">Общий</button>
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="1d">День</button>
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="1w">Неделя</button>
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="1m">Месяц</button>
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="3m">3 месяца</button>
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="6m">6 месяцев</button>
+                                <button class="period-option w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors" data-period="1y">Год</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <p id="pnl-value" class="text-3xl font-bold text-white mt-2">$0.00 (0.00%)</p>
+                <div class="absolute inset-0 bg-transparent cursor-pointer" id="pnl-click-area"></div>
             </div>
+            
             <div class="glass-card p-6 rounded-lg">
                 <div class="flex items-center space-x-3 mb-2">
                     <i data-lucide="wallet" class="w-5 h-5 text-sky-400"></i>
@@ -129,6 +191,65 @@
         </div>
     </div>
 
+    <!-- 🔥 МОДАЛЬНОЕ ОКНО P&L ДЕТАЛИ -->
+    <div id="pnl-modal" class="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="modal-content bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-4xl transform translate-y-8 opacity-0 transition-all duration-300">
+                <!-- Заголовок модального окна -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="bar-chart-3" class="w-6 h-6 text-sky-400"></i>
+                        <h3 class="text-xl font-semibold text-white">Детальный анализ P&L</h3>
+                        <span id="modal-period-badge" class="px-3 py-1 bg-sky-600 text-white text-sm rounded-full">Общий</span>
+                    </div>
+                    <button id="close-modal" class="text-gray-400 hover:text-white transition-colors">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                
+                <!-- Содержимое модального окна -->
+                <div class="p-6">
+                    <!-- Основные метрики периода -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-green-400"></i>
+                                <span class="text-sm text-gray-400">P&L за период</span>
+                            </div>
+                            <p id="modal-period-pnl" class="text-2xl font-bold text-white">$0.00</p>
+                            <p id="modal-period-pnl-pct" class="text-sm text-gray-400">(0.00%)</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i data-lucide="arrow-up" class="w-4 h-4 text-sky-400"></i>
+                                <span class="text-sm text-gray-400">Максимум</span>
+                            </div>
+                            <p id="modal-max-balance" class="text-2xl font-bold text-white">$0.00</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i data-lucide="arrow-down" class="w-4 h-4 text-orange-400"></i>
+                                <span class="text-sm text-gray-400">Минимум</span>
+                            </div>
+                            <p id="modal-min-balance" class="text-2xl font-bold text-white">$0.00</p>
+                        </div>
+                    </div>
+                    
+                    <!-- График P&L за период -->
+                    <div class="bg-gray-800/30 p-4 rounded-lg border border-gray-700">
+                        <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i data-lucide="activity" class="w-5 h-5 mr-2 text-sky-400"></i>
+                            График P&L за период
+                        </h4>
+                        <div class="h-80">
+                            <canvas id="pnlChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- Инициализация иконок ---
@@ -136,7 +257,6 @@
         
         // --- КОНФИГУРАЦИЯ ---
         const API_BASE_URL = "http://localhost:8080"; // Адрес нашего будущего Python-сервера
-        const INITIAL_CASH = 10000; // Используется для расчета P&L
 
         // --- UI ЭЛЕМЕНТЫ ---
         const ui = {
@@ -147,9 +267,27 @@
             positionsContainer: document.getElementById('positions-container'),
             logContainer: document.getElementById('log-container'),
             statusIndicator: document.getElementById('status-indicator'),
+            // P&L элементы
+            pnlCard: document.getElementById('pnl-card'),
+            pnlDropdownBtn: document.getElementById('pnl-dropdown-btn'),
+            pnlDropdown: document.getElementById('pnl-dropdown'),
+            currentPeriod: document.getElementById('current-period'),
+            // Модальное окно
+            pnlModal: document.getElementById('pnl-modal'),
+            closeModal: document.getElementById('close-modal'),
+            modalPeriodBadge: document.getElementById('modal-period-badge'),
+            modalPeriodPnl: document.getElementById('modal-period-pnl'),
+            modalPeriodPnlPct: document.getElementById('modal-period-pnl-pct'),
+            modalMaxBalance: document.getElementById('modal-max-balance'),
+            modalMinBalance: document.getElementById('modal-min-balance'),
         };
         
-        // --- НАСТРОЙКА ГРАФИКА ---
+        // --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
+        let currentPnLPeriod = 'total';
+        let currentBalanceInfo = null;
+        let pnlChart = null;
+        
+        // --- НАСТРОЙКА ОСНОВНОГО ГРАФИКА ---
         const ctx = document.getElementById('priceChart').getContext('2d');
         const priceChart = new Chart(ctx, {
             type: 'line',
@@ -182,14 +320,223 @@
                         borderWidth: 1,
                     }
                 },
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
+                interaction: { mode: 'index', intersect: false },
             }
         });
 
-        // --- ОСНОВНЫЕ ФУНКЦИИ ---
+        // --- P&L ФУНКЦИИ ---
+        async function updatePnLDisplay(period = 'total') {
+            try {
+                if (period === 'total' && currentBalanceInfo) {
+                    // Показываем общий P&L из текущего баланса
+                    const totalPnl = currentBalanceInfo.total_pnl_absolute || 0;
+                    const totalPnlPct = currentBalanceInfo.total_pnl_percentage || 0;
+                    
+                    ui.pnlValue.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)} (${totalPnlPct.toFixed(2)}%)`;
+                    ui.pnlValue.className = `text-3xl font-bold mt-2 ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                    return;
+                }
+                
+                // Получаем P&L за конкретный период
+                const response = await fetch(`${API_BASE_URL}/api/pnl/period`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ period: period })
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch P&L data');
+                
+                const data = await response.json();
+                
+                const pnl = data.pnl_absolute || 0;
+                const pnlPct = data.pnl_percentage || 0;
+                
+                ui.pnlValue.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct.toFixed(2)}%)`;
+                ui.pnlValue.className = `text-3xl font-bold mt-2 ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                
+            } catch (error) {
+                console.error('Error updating P&L:', error);
+                ui.pnlValue.textContent = 'Ошибка загрузки';
+                ui.pnlValue.className = 'text-3xl font-bold mt-2 text-gray-400';
+            }
+        }
+        
+        async function showPnLModal(period) {
+            try {
+                let data;
+                
+                if (period === 'total' && currentBalanceInfo) {
+                    // Для общего P&L используем текущие данные баланса
+                    data = {
+                        period: 'total',
+                        pnl_absolute: currentBalanceInfo.total_pnl_absolute || 0,
+                        pnl_percentage: currentBalanceInfo.total_pnl_percentage || 0,
+                        max_balance: currentBalanceInfo.current_balance || 0,
+                        min_balance: currentBalanceInfo.initial_balance || 0,
+                        chart_data: {
+                            timestamps: [],
+                            balances: [],
+                            pnl_absolute: [],
+                            pnl_percentage: []
+                        }
+                    };
+                } else {
+                    // Получаем детальные данные за период
+                    const response = await fetch(`${API_BASE_URL}/api/pnl/period`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ period: period })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to fetch detailed P&L data');
+                    data = await response.json();
+                }
+                
+                // Обновляем содержимое модального окна
+                const periodNames = {
+                    'total': 'Общий', '1d': 'День', '1w': 'Неделя', 
+                    '1m': 'Месяц', '3m': '3 месяца', '6m': '6 месяцев', '1y': 'Год'
+                };
+                
+                ui.modalPeriodBadge.textContent = periodNames[period] || period;
+                ui.modalPeriodPnl.textContent = `${data.pnl_absolute >= 0 ? '+' : ''}$${data.pnl_absolute.toFixed(2)}`;
+                ui.modalPeriodPnlPct.textContent = `(${data.pnl_percentage.toFixed(2)}%)`;
+                ui.modalMaxBalance.textContent = `$${data.max_balance.toFixed(2)}`;
+                ui.modalMinBalance.textContent = `$${data.min_balance.toFixed(2)}`;
+                
+                // Применяем цвета
+                const pnlColor = data.pnl_absolute >= 0 ? 'text-green-400' : 'text-red-400';
+                ui.modalPeriodPnl.className = `text-2xl font-bold ${pnlColor}`;
+                ui.modalPeriodPnlPct.className = `text-sm ${pnlColor}`;
+                
+                // Обновляем график P&L
+                updatePnLChart(data.chart_data);
+                
+                // Показываем модальное окно
+                ui.pnlModal.classList.add('show');
+                ui.pnlModal.querySelector('.modal-content').classList.add('show');
+                
+            } catch (error) {
+                console.error('Error showing P&L modal:', error);
+                addLog(`Ошибка загрузки данных P&L: ${error.message}`, 'error');
+            }
+        }
+        
+        function updatePnLChart(chartData) {
+            const ctx = document.getElementById('pnlChart').getContext('2d');
+            
+            if (pnlChart) {
+                pnlChart.destroy();
+            }
+            
+            pnlChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.timestamps.map(t => new Date(t)),
+                    datasets: [{
+                        label: 'P&L',
+                        data: chartData.pnl_absolute,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        pointHoverRadius: 4,
+                        tension: 0.4,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'hour', tooltipFormat: 'PP HH:mm' },
+                            ticks: { color: '#9ca3af', maxRotation: 0 },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { 
+                                color: '#9ca3af', 
+                                callback: value => `${value >= 0 ? '+' : ''}$${value.toFixed(2)}`
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1f2937',
+                            titleColor: '#e5e7eb',
+                            bodyColor: '#d1d5db',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    return `P&L: ${value >= 0 ? '+' : ''}$${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- EVENT LISTENERS ---
+        
+        // Dropdown для выбора периода P&L
+        ui.pnlDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ui.pnlDropdown.classList.toggle('show');
+        });
+        
+        // Закрытие dropdown при клике вне его
+        document.addEventListener('click', () => {
+            ui.pnlDropdown.classList.remove('show');
+        });
+        
+        // Выбор периода в dropdown
+        document.querySelectorAll('.period-option').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const period = button.dataset.period;
+                currentPnLPeriod = period;
+                
+                const periodNames = {
+                    'total': 'Общий', '1d': 'День', '1w': 'Неделя', 
+                    '1m': 'Месяц', '3m': '3 месяца', '6m': '6 месяцев', '1y': 'Год'
+                };
+                
+                ui.currentPeriod.textContent = periodNames[period];
+                ui.pnlDropdown.classList.remove('show');
+                
+                await updatePnLDisplay(period);
+            });
+        });
+        
+        // Клик по P&L карточке для открытия модального окна
+        ui.pnlCard.addEventListener('click', (e) => {
+            if (!e.target.closest('#pnl-dropdown-btn') && !e.target.closest('#pnl-dropdown')) {
+                showPnLModal(currentPnLPeriod);
+            }
+        });
+        
+        // Закрытие модального окна
+        ui.closeModal.addEventListener('click', () => {
+            ui.pnlModal.classList.remove('show');
+            ui.pnlModal.querySelector('.modal-content').classList.remove('show');
+        });
+        
+        // Закрытие модального окна по клику на overlay
+        ui.pnlModal.addEventListener('click', (e) => {
+            if (e.target === ui.pnlModal) {
+                ui.pnlModal.classList.remove('show');
+                ui.pnlModal.querySelector('.modal-content').classList.remove('show');
+            }
+        });
+
+        // --- ОСНОВНЫЕ ФУНКЦИИ (без изменений) ---
         function addLog(message, type = 'info') {
             const time = new Date().toLocaleTimeString();
             const colors = {
@@ -212,17 +559,28 @@
             }
         }
 
-        function updateDashboard(data) {
+        async function updateDashboard(data) {
+            // Получаем информацию о балансе из API
+            try {
+                const balanceResponse = await fetch(`${API_BASE_URL}/api/balance/current`);
+                if (balanceResponse.ok) {
+                    currentBalanceInfo = await balanceResponse.json();
+                }
+            } catch (error) {
+                console.error('Error fetching balance info:', error);
+            }
+
             // Обновляем основные метрики
             const equity = data.portfolio_metrics.equity;
-            const pnl = equity - INITIAL_CASH;
-            const pnlPercent = (pnl / INITIAL_CASH) * 100;
+            const cash = data.portfolio_metrics.cash;
+            const totalTrades = data.portfolio_metrics.total_trades;
 
-            ui.equityValue.textContent = `$${equity.toFixed(2)}`;
-            ui.pnlValue.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`;
-            ui.cashValue.textContent = `$${data.portfolio_metrics.cash.toFixed(2)}`;
-            ui.tradesValue.textContent = data.portfolio_metrics.total_trades;
-            ui.pnlValue.className = `text-3xl font-bold mt-2 ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            ui.equityValue.textContent = `${equity.toFixed(2)}`;
+            ui.cashValue.textContent = `${cash.toFixed(2)}`;
+            ui.tradesValue.textContent = totalTrades;
+            
+            // Обновляем P&L с учетом выбранного периода
+            await updatePnLDisplay(currentPnLPeriod);
             
             // Обновляем UI позиций
             updatePositionsUI(data.open_positions);
@@ -246,12 +604,12 @@
                 positionEl.innerHTML = `
                     <div class="flex justify-between items-center">
                         <span class="font-bold text-lg text-white">${pos.ticker}</span>
-                        <span class="text-sm ${pnlColor} font-semibold">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</span>
+                        <span class="text-sm ${pnlColor} font-semibold">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}</span>
                     </div>
                     <div class="text-xs text-gray-400 mt-2 grid grid-cols-3 gap-2">
                         <span><strong class="font-medium text-gray-300">Размер:</strong> ${pos.size.toFixed(4)}</span>
-                        <span><strong class="font-medium text-gray-300">Вход:</strong> $${pos.entry_price.toFixed(2)}</span>
-                        <span><strong class="font-medium text-gray-300">Сейчас:</strong> $${pos.current_price.toFixed(2)}</span>
+                        <span><strong class="font-medium text-gray-300">Вход:</strong> ${pos.entry_price.toFixed(2)}</span>
+                        <span><strong class="font-medium text-gray-300">Сейчас:</strong> ${pos.current_price.toFixed(2)}</span>
                     </div>
                 `;
                 ui.positionsContainer.appendChild(positionEl);
@@ -294,11 +652,13 @@
                 }
                 const data = await response.json();
                 
-                updateDashboard(data);
+                await updateDashboard(data);
 
                 // Обновляем лог новыми записями с сервера
                 if(data.logs) {
-                    data.logs.forEach(log => addLog(log.message, log.type));
+                    // Очищаем лог и добавляем все записи заново, чтобы избежать дублирования
+                    ui.logContainer.innerHTML = '';
+                    data.logs.slice(0, 50).forEach(log => addLog(log.message, log.type));
                 }
 
                 ui.statusIndicator.innerHTML = `<div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div><span class="text-green-400">Подключено</span>`;
@@ -310,10 +670,32 @@
             }
         }
 
+        // --- KEYBOARD SHORTCUTS ---
+        document.addEventListener('keydown', (e) => {
+            // ESC для закрытия модального окна
+            if (e.key === 'Escape' && ui.pnlModal.classList.contains('show')) {
+                ui.pnlModal.classList.remove('show');
+                ui.pnlModal.querySelector('.modal-content').classList.remove('show');
+            }
+            
+            // P для открытия P&L модального окна
+            if (e.key === 'p' || e.key === 'P') {
+                if (!ui.pnlModal.classList.contains('show')) {
+                    showPnLModal(currentPnLPeriod);
+                }
+            }
+        });
+
         // --- ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ---
         addLog("Инициализация дашборда...", "info");
+        addLog("Подсказка: Нажмите 'P' для быстрого доступа к P&L анализу", "info");
         fetchDataFromServer(); // Первый запуск
         setInterval(fetchDataFromServer, 5000); // Обновляем данные каждые 5 секунд
+
+        // Обновляем иконки после добавления элементов
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 100);
     });
 </script>
 </body>

@@ -1,0 +1,18 @@
+{
+  "learning_rate": 3.6928103641833434e-05,
+  "gamma": 0.9879689470539743,
+  "hidden_dim": 128,
+  "lookback_window": 48,
+  "marketaux_weight": 0.26880295011546756,
+  "fear_greed_weight": 0.3020162719793856,
+  "golden_cross_weight": 0.14751087409114755,
+  "vix_weight": 0.17132153893788968,
+  "marketaux_reliability": 0.8484346171889839,
+  "fear_greed_reliability": 0.7070869255016938,
+  "golden_cross_reliability": 0.6338598705020793,
+  "vix_reliability": 0.635500695999862,
+  "price_reliability": 0.6921709586134343,
+  "gc_reward_bonus": 2.3935963094615933,
+  "drawdown_penalty": 8.564320572695474,
+  "episodes": 80
+}

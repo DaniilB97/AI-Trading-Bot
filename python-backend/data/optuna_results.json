@@ -1,0 +1,7 @@
+{
+  "learning_rate": 0.0004090579886161269,
+  "gamma": 0.9639408337175912,
+  "lookback_window": 12,
+  "marketaux_weight": 0.4131402159919049,
+  "fear_greed_weight": 0.3659847614255261
+}

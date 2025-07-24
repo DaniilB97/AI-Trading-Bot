@@ -1,0 +1,101 @@
+{
+  "initial_balance": 114032.33,
+  "history": [
+    {
+      "timestamp": "2025-07-24T18:14:50.524168",
+      "balance": 114032.33,
+      "equity": 114032.33,
+      "available": 114032.33,
+      "positions_value": 0,
+      "pnl_absolute": 0.0,
+      "pnl_percentage": 0.0,
+      "metadata": {
+        "positions_count": 0,
+        "position_details": [],
+        "api_balance_fields": {
+          "balance": 114032.33,
+          "deposit": 114032.33,
+          "profitLoss": 0.0,
+          "available": 114032.33
+        }
+      }
+    },
+    {
+      "timestamp": "2025-07-24T18:24:14.297641",
+      "balance": 114032.33,
+      "equity": 114032.33,
+      "available": 114032.33,
+      "positions_value": 0,
+      "pnl_absolute": 0.0,
+      "pnl_percentage": 0.0,
+      "metadata": {
+        "positions_count": 0,
+        "position_details": [],
+        "api_balance_fields": {
+          "balance": 114032.33,
+          "deposit": 114032.33,
+          "profitLoss": 0.0,
+          "available": 114032.33
+        }
+      }
+    },
+    {
+      "timestamp": "2025-07-24T18:24:40.476306",
+      "balance": 114032.33,
+      "equity": 114032.33,
+      "available": 114032.33,
+      "positions_value": 0,
+      "pnl_absolute": 0.0,
+      "pnl_percentage": 0.0,
+      "metadata": {
+        "positions_count": 0,
+        "position_details": [],
+        "api_balance_fields": {
+          "balance": 114032.33,
+          "deposit": 114032.33,
+          "profitLoss": 0.0,
+          "available": 114032.33
+        }
+      }
+    },
+    {
+      "timestamp": "2025-07-24T18:26:02.528474",
+      "balance": 114032.33,
+      "equity": 114032.33,
+      "available": 114032.33,
+      "positions_value": 0,
+      "pnl_absolute": 0.0,
+      "pnl_percentage": 0.0,
+      "metadata": {
+        "positions_count": 0,
+        "position_details": [],
+        "api_balance_fields": {
+          "balance": 114032.33,
+          "deposit": 114032.33,
+          "profitLoss": 0.0,
+          "available": 114032.33
+        }
+      }
+    },
+    {
+      "timestamp": "2025-07-24T18:26:57.274773",
+      "balance": 114032.33,
+      "equity": 114032.33,
+      "available": 114032.33,
+      "positions_value": 0,
+      "pnl_absolute": 0.0,
+      "pnl_percentage": 0.0,
+      "metadata": {
+        "positions_count": 0,
+        "position_details": [],
+        "api_balance_fields": {
+          "balance": 114032.33,
+          "deposit": 114032.33,
+          "profitLoss": 0.0,
+          "available": 114032.33
+        }
+      }
+    }
+  ],
+  "last_updated": "2025-07-24T18:26:57.274778"
+}

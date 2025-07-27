@@ -150,6 +150,8 @@ class WalletAnalyzer:
             return {"error": "No transactions found"}
         
         df = pd.DataFrame(transactions)
+        
+        # Convert values safely
         df['value_eth'] = df['value'].apply(lambda x: float(Web3.from_wei(int(x), 'ether')))
         df['timestamp'] = pd.to_datetime(df['timeStamp'].astype(int), unit='s')
         df['gas_cost_eth'] = (df['gasUsed'].astype(float) * df['gasPrice'].astype(float)) / 1e18
@@ -157,28 +159,36 @@ class WalletAnalyzer:
         # Determine if transaction is incoming or outgoing
         df['direction'] = df['from'].apply(lambda x: 'OUT' if x.lower() == address.lower() else 'IN')
         
+        # Calculate date range safely
+        date_range_days = (df['timestamp'].max() - df['timestamp'].min()).days
+        if date_range_days == 0:
+            date_range_days = 1
+        
         analysis = {
             'total_transactions': len(df),
             'first_transaction': df['timestamp'].min().isoformat(),
             'last_transaction': df['timestamp'].max().isoformat(),
-            'total_eth_sent': df[df['direction'] == 'OUT']['value_eth'].sum(),
-            'total_eth_received': df[df['direction'] == 'IN']['value_eth'].sum(),
-            'total_gas_spent': df['gas_cost_eth'].sum(),
+            'total_eth_sent': float(df[df['direction'] == 'OUT']['value_eth'].sum()),
+            'total_eth_received': float(df[df['direction'] == 'IN']['value_eth'].sum()),
+            'total_gas_spent': float(df['gas_cost_eth'].sum()),
             'unique_addresses_interacted': len(set(df['from'].tolist() + df['to'].tolist())) - 1,
             'failed_transactions': len(df[df['isError'] == '1']),
-            'avg_transaction_value': df['value_eth'].mean(),
-            'max_transaction_value': df['value_eth'].max(),
+            'avg_transaction_value': float(df['value_eth'].mean()),
+            'max_transaction_value': float(df['value_eth'].max()),
             'transaction_frequency': {
-                'daily_avg': len(df) / ((df['timestamp'].max() - df['timestamp'].min()).days + 1),
-                'monthly_breakdown': df.groupby(df['timestamp'].dt.to_period('M')).size().to_dict()
+                'daily_avg': len(df) / date_range_days,
+                'monthly_breakdown': df.groupby(df['timestamp'].dt.strftime('%Y-%m')).size().to_dict()
             }
         }
         
         # Find most interacted addresses
         all_addresses = df[df['from'] == address.lower()]['to'].tolist() + \
                        df[df['to'] == address.lower()]['from'].tolist()
-        address_counts = pd.Series(all_addresses).value_counts()
-        analysis['top_interacted_addresses'] = address_counts.head(10).to_dict()
+        if all_addresses:
+            address_counts = pd.Series(all_addresses).value_counts()
+            analysis['top_interacted_addresses'] = {str(k): int(v) for k, v in address_counts.head(10).items()}
+        else:
+            analysis['top_interacted_addresses'] = {}
         
         return analysis
     
@@ -195,20 +205,24 @@ class WalletAnalyzer:
         token_analysis = {}
         for token in df['tokenSymbol'].unique():
             token_df = df[df['tokenSymbol'] == token]
-            decimals = int(token_df['tokenDecimal'].iloc[0])
             
-            token_analysis[token] = {
-                'contract': token_df['contractAddress'].iloc[0],
+            try:
+                decimals = int(token_df['tokenDecimal'].iloc[0])
+            except:
+                decimals = 18  # Default to 18 if parsing fails
+            
+            token_analysis[str(token)] = {
+                'contract': str(token_df['contractAddress'].iloc[0]),
                 'total_bought': float(token_df[token_df['direction'] == 'BUY']['value'].sum()) / (10**decimals),
                 'total_sold': float(token_df[token_df['direction'] == 'SELL']['value'].sum()) / (10**decimals),
-                'transaction_count': len(token_df),
+                'transaction_count': int(len(token_df)),
                 'first_transaction': token_df['timestamp'].min().isoformat(),
                 'last_transaction': token_df['timestamp'].max().isoformat(),
                 'unique_addresses': len(set(token_df['from'].tolist() + token_df['to'].tolist())) - 1
             }
             
             # Calculate net position
-            token_analysis[token]['net_position'] = token_analysis[token]['total_bought'] - token_analysis[token]['total_sold']
+            token_analysis[str(token)]['net_position'] = token_analysis[str(token)]['total_bought'] - token_analysis[str(token)]['total_sold']
         
         return {
             'total_unique_tokens': len(token_analysis),

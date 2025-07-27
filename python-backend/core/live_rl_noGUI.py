@@ -22,6 +22,8 @@ from sklearn.preprocessing import MinMaxScaler
 from dotenv import load_dotenv
 # Real Capital.com API client
 from capital_request import CapitalComAPI
+# Real News API client
+from real_news_api import RealNewsAPIClient, get_advanced_sentiment
 
 # --- Configuration ---
 load_dotenv()
@@ -56,19 +58,15 @@ logger = logging.getLogger(__name__)
 
 class NewsAPIClient:
     """
-    Placeholder for real news API client.
-    This dummy implementation returns some example articles.
+    DEPRECATED: Legacy placeholder class - now replaced with RealNewsAPIClient
+    Keeping for backward compatibility only
     """
     def __init__(self, api_key: str):
         self.api_key = api_key
-        if not api_key:
-            logger.warning("News API key not set. Using dummy data.")
+        logger.warning("Using deprecated NewsAPIClient. Please use RealNewsAPIClient instead.")
 
     def get_news(self, query: str, language: str = "en") -> List[Dict[str, str]]:
-        """
-        Gets news articles. In a real implementation, this would make an HTTP request.
-        """
-        logger.info(f"Getting dummy news for query: '{query}'")
+        logger.warning("Using dummy news data. Real API client should be used instead.")
         return [
             {"title": "Gold prices surge amid economic uncertainty and market volatility."},
             {"title": "Investors flock to gold as a safe-haven asset."},
@@ -78,17 +76,10 @@ class NewsAPIClient:
 
 def get_sentiment(text: str) -> float:
     """
-    Very simple placeholder for sentiment analysis.
-    In a real system you would use a library like NLTK (VADER) or a pre-trained model.
-    Returns a score from -1 (negative) to 1 (positive).
+    DEPRECATED: Simple sentiment analysis - now replaced with get_advanced_sentiment
     """
-    text = text.lower()
-    if any(word in text for word in ["surge", "bullish", "safe-haven", "strong", "rise"]):
-        return 0.7
-    elif any(word in text for word in ["slips", "falls", "weakens", "bearish", "uncertainty"]):
-        return -0.5
-    else:
-        return 0.1
+    logger.warning("Using deprecated get_sentiment. Please use get_advanced_sentiment instead.")
+    return get_advanced_sentiment(text)
     
 def get_market_status():
     """
@@ -251,20 +242,59 @@ class TradingBot:
         
         df = self.create_ohlc_df(market_data['prices'])
 
-        # Get sentiment from news
-        self.log_message("📰 Getting sentiment from news...")
+        # Get sentiment from news - REAL NEWS API with MarketAux sentiments
+        self.log_message("📰 Getting REAL sentiment from news APIs (prioritizing MarketAux ready sentiments)...")
         try:
-            articles = self.news_api.get_news(query="gold", language="en")
-            live_sentiment_score = 0.0
+            articles, live_sentiment_score = self.news_api.get_news_with_sentiment(query="gold", language="en")
+            
             if articles:
-                sentiments = [get_sentiment(article['title']) for article in articles if article.get('title')]
-                if sentiments:
-                    live_sentiment_score = sum(sentiments) / len(sentiments)
-                    self.log_message(f"Found sentiment score: {live_sentiment_score:.2f}")
+                self.log_message(f"Found {len(articles)} news articles")
+                
+                # Show breakdown of sentiment analysis
+                marketaux_count = sum(1 for a in articles if a.get('has_ready_sentiment', False))
+                newsapi_count = len(articles) - marketaux_count
+                
+                self.log_message(f"   📊 MarketAux articles (ready sentiment): {marketaux_count}")
+                self.log_message(f"   📰 NewsAPI articles (analyzed sentiment): {newsapi_count}")
+                
+                # Log a few examples with their sentiment sources
+                for i, article in enumerate(articles[:3]):
+                    title = article.get('title', '')[:60] + "..."
+                    source = article.get('source', {}).get('name', 'Unknown')
+                    
+                    if article.get('has_ready_sentiment', False):
+                        sentiment = article.get('marketaux_sentiment', 0.0)
+                        confidence = article.get('sentiment_confidence', 0.0)
+                        self.log_message(f"   📊 {source}: {sentiment:+.3f} (confidence: {confidence:.2f}) - {title}")
+                    else:
+                        # This would have been analyzed
+                        text = f"{article.get('title', '')} {article.get('description', '')}".strip()
+                        if text:
+                            sentiment = get_advanced_sentiment(text)
+                            self.log_message(f"   📰 {source}: {sentiment:+.3f} (analyzed) - {title}")
+                
+                self.log_message(f"✅ Final weighted sentiment: {live_sentiment_score:.3f}")
+                
+                # Interpret sentiment for user
+                if live_sentiment_score > 0.2:
+                    sentiment_label = "😊 BULLISH"
+                elif live_sentiment_score < -0.2:
+                    sentiment_label = "😞 BEARISH"
+                elif live_sentiment_score > 0.05:
+                    sentiment_label = "🙂 SLIGHTLY POSITIVE"
+                elif live_sentiment_score < -0.05:
+                    sentiment_label = "🙁 SLIGHTLY NEGATIVE"
+                else:
+                    sentiment_label = "😐 NEUTRAL"
+                
+                self.log_message(f"📈 Market sentiment: {sentiment_label}")
+                
             else:
-                self.log_message("No fresh news found for sentiment analysis.")
+                self.log_message("No fresh news articles found.")
+                live_sentiment_score = 0.0
+                
         except Exception as e:
-            self.log_message(f"Error getting news: {e}", "error")
+            self.log_message(f"Error getting real news: {e}", "error")
             live_sentiment_score = 0.0
         
         # Construct state and get model decision
@@ -461,7 +491,12 @@ if __name__ == "__main__":
     
     print("✅ Successfully authenticated with Capital.com API")
 
-    news_api = NewsAPIClient(api_key=os.getenv("NEWS_API_KEY", ""))
+    # Initialize real news API client
+    print("📰 Initializing news API clients...")
+    news_api = RealNewsAPIClient(
+        news_api_key=os.getenv("NEWS_API_KEY"),
+        marketaux_api_key=os.getenv("MARKETAUX_API_TOKEN")
+    )
 
     # --- Initialize RL agent ---
     state_dim = LOOKBACK_WINDOW * len(FEATURE_COLUMNS) + 4  # (30 * 5) + 4 = 154

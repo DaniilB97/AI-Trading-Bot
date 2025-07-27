@@ -91,15 +91,14 @@ class RealNewsAPIClient:
         self._rate_limit()
         
         try:
-            # Use the working configuration from debug script
             params = {
-                'search': query,
+                'symbols': 'GLD,GOLD,XAU',  # Gold-related symbols
+                'filter_entities': 'true',
                 'language': 'en',
-                'limit': 15,
+                'limit': 20,
+                'published_after': (datetime.now() - timedelta(hours=24)).isoformat(),
                 'api_token': self.marketaux_api_key
             }
-            
-            logger.info(f"MarketAux request with search term: {query}")
             
             response = requests.get(self.marketaux_url, params=params, timeout=10)
             response.raise_for_status()
@@ -128,53 +127,23 @@ class RealNewsAPIClient:
                         'entities': article.get('entities', []),
                         # Add MarketAux-specific fields
                         'marketaux_sentiment': marketaux_sentiment,
-                        'has_ready_sentiment': True if sentiment_data else False,
-                        'sentiment_confidence': self._get_sentiment_confidence(sentiment_data),
-                        'raw_sentiment_data': sentiment_data  # Keep for debugging
+                        'has_ready_sentiment': True,
+                        'sentiment_confidence': sentiment_data.get('confidence', 0.5)
                     }
                     
                     standardized_articles.append(standardized_article)
                 
                 return standardized_articles
             else:
-                logger.error(f"MarketAux unexpected response structure: {data}")
+                logger.error(f"MarketAux error: {data}")
                 return []
                 
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"MarketAux HTTP error: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response content: {e.response.text}")
-            return []
         except requests.exceptions.RequestException as e:
             logger.error(f"MarketAux request error: {e}")
             return []
         except Exception as e:
             logger.error(f"MarketAux unexpected error: {e}")
             return []
-
-    def _get_sentiment_confidence(self, sentiment_data: Dict) -> float:
-        """
-        Calculate confidence score from sentiment data
-        """
-        if not sentiment_data:
-            return 0.0
-        
-        try:
-            # If MarketAux provides confidence directly
-            if 'confidence' in sentiment_data:
-                return float(sentiment_data['confidence'])
-            
-            # Calculate confidence based on sentiment strength
-            positive = float(sentiment_data.get('positive', 0))
-            negative = float(sentiment_data.get('negative', 0))
-            neutral = float(sentiment_data.get('neutral', 0))
-            
-            # Higher confidence when sentiment is more decisive
-            max_sentiment = max(positive, negative, neutral)
-            return max_sentiment
-            
-        except (ValueError, TypeError):
-            return 0.5  # Default confidence
 
     def _extract_marketaux_sentiment(self, sentiment_data: Dict) -> float:
         """

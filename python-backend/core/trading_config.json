@@ -1,0 +1,18 @@
+{
+  "max_position_size_eth": 1.0,
+  "max_gas_price_gwei": 100,
+  "slippage_tolerance": 0.03,
+  "min_profit_threshold": 0.02,
+  "copy_percentage": 0.1,
+  "token_whitelist": [],
+  "token_blacklist": [],
+  "min_liquidity_usd": 50000,
+  "enable_auto_trade": false,
+  "dry_run": true,
+  "monitor_interval": 30,
+  "dex_routers": {
+    "uniswap_v2": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    "uniswap_v3": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "sushiswap": "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F"
+  }
+}

@@ -1,0 +1,7 @@
+{
+    "max_position_size_eth": 1.0,
+    "copy_percentage": 0.1,
+    "enable_auto_trade": false,
+    "dry_run": true,
+    "slippage_tolerance": 0.03
+  }

@@ -1,28 +1,28 @@
 [
-    {
-      "address": "0x2ba553d9f990a3b66b03b2dc0d030dfc1c061036",
-      "name": "Main Whale",
+  {
+    "address": "0x2ba553d9f990a3b66b03b2dc0d030dfc1c061036",
+    "name": "Main Whale",
+    "notes": "Primary tracking wallet"
+  },
+  {
+      "address": "0x77c3ea550d2da44b120e55071f57a108f8dd5e45",
+      "name": "2nd whale",
       "notes": "Primary tracking wallet"
     },
-    {
-        "address": "0x77c3ea550d2da44b120e55071f57a108f8dd5e45",
-        "name": "2nd whale",
-        "notes": "Primary tracking wallet"
-      },
-    {
-       "address": "0xb8b9e3097c8b1dddf9c5ea9d48a7ebeaf09d67d2",
-       "name": "3rd whale",
-       "notes": "Primary tracking wallet"
-     },
-     {
-        "address": "0xd63fca366dbbdeeee76edb4e637c8f89c4605388",
-        "name": "4th whale",
-        "notes": "Primary tracking wallet"
-      }
+  {
+     "address": "0xb8b9e3097c8b1dddf9c5ea9d48a7ebeaf09d67d2",
+     "name": "3rd whale",
+     "notes": "Primary tracking wallet"
+   },
+   {
+      "address": "0xd63fca366dbbdeeee76edb4e637c8f89c4605388",
+      "name": "4th whale",
+      "notes": "Primary tracking wallet"
+    }
 
-      
+    
 
-  ]
+]
 
-  
-  
+
+

@@ -51,13 +51,15 @@ class DexFollower:
     def _load_config(self) -> Dict:
         """Загрузка конфигурации для Solana DEX мониторинга"""
         default_config = {
-            "monitor_interval": 20,  # секунд
+            "monitor_interval": 5,  # Каждые 5 секунд для real-time
             "analyze_patterns": False,  # Заглушка для Gemini анализа
-            "min_transaction_amount_sol": 0.1,
+            "min_transaction_amount_sol": 0.01,
             "track_meme_coins": True,
             "profitability_threshold": 1.5,  # 150% прибыль для успешной сделки
-            "max_transactions_per_scan": 50,
+            "max_transactions_per_scan": 10,  # Только последние 10
             "save_transaction_details": True,
+            "real_time_mode": True,  # Режим реального времени
+            "max_age_seconds": 5,    # Максимальный возраст транзакции
             "programs_to_track": [
                 "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",  # Jupiter
                 "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",  # Raydium
@@ -126,7 +128,7 @@ class DexFollower:
         self.last_rpc_call = time.time()
     
     async def get_wallet_transactions(self, wallet_address: str, limit: int = 50) -> List[Dict]:
-        """Получение транзакций кошелька через Solana RPC"""
+        """Получение ТОЛЬКО свежих транзакций кошелька (последние 5 секунд)"""
         if not self.quicknode_url:
             self.logger.error("QuickNode URL не настроен")
             return []
@@ -142,7 +144,7 @@ class DexFollower:
                 "params": [
                     wallet_address,
                     {
-                        "limit": limit,
+                        "limit": 10,  # Только последние 10 транзакций
                         "commitment": "confirmed"
                     }
                 ]
@@ -161,16 +163,33 @@ class DexFollower:
                 return []
             
             signatures = data.get('result', [])
-            self.logger.debug(f"Получено {len(signatures)} подписей для {wallet_address[:10]}...")
             
-            # Получаем детали транзакций
+            # Фильтруем только свежие транзакции (последние 5 секунд)
+            current_time = int(time.time())
+            fresh_signatures = []
+            
+            for sig_info in signatures:
+                block_time = sig_info.get('blockTime')
+                if block_time and (current_time - block_time) <= 5:  # 5 секунд
+                    fresh_signatures.append(sig_info)
+            
+            if not fresh_signatures:
+                self.logger.debug(f"Нет свежих транзакций для {wallet_address[:10]}...")
+                return []
+            
+            self.logger.info(f"🔥 Найдено {len(fresh_signatures)} свежих транзакций (≤5сек)")
+            
+            # Получаем детали только свежих транзакций
             transactions = []
-            for sig_info in signatures[:self.config['max_transactions_per_scan']]:
+            for sig_info in fresh_signatures:
                 if sig_info['signature'] in self.processed_txs:
                     continue
                 
                 tx_details = await self.get_transaction_details(sig_info['signature'])
                 if tx_details:
+                    # Добавляем возраст транзакции
+                    age_seconds = current_time - tx_details.get('timestamp', current_time)
+                    tx_details['age_seconds'] = age_seconds
                     transactions.append(tx_details)
             
             return transactions
@@ -296,8 +315,8 @@ class DexFollower:
             pre_balance = pre_dict.get(key, {})
             post_balance = post_dict.get(key, {})
             
-            pre_amount = float(pre_balance.get('uiTokenAmount', {}).get('uiAmount', 0))
-            post_amount = float(post_balance.get('uiTokenAmount', {}).get('uiAmount', 0))
+            pre_amount = float(pre_balance.get('uiTokenAmount', {}).get('uiAmount') or 0)
+            post_amount = float(post_balance.get('uiTokenAmount', {}).get('uiAmount') or 0)
             
             if pre_amount != post_amount:
                 change = {
@@ -380,35 +399,88 @@ class DexFollower:
         return enhanced_analysis
     
     async def monitor_wallet(self, wallet: Dict):
-        """Мониторинг одного кошелька"""
+        """Мониторинг одного кошелька в режиме реального времени"""
         address = wallet['address']
         name = wallet.get('name', 'Unknown')
         
         self.logger.wallet_scan_start(address, name)
         
-        # Получаем транзакции
-        transactions = await self.get_wallet_transactions(address)
-        
-        for tx in transactions:
-            if tx['signature'] in self.processed_txs:
-                continue
+        try:
+            # Получаем только свежие транзакции
+            transactions = await self.get_wallet_transactions(address)
             
-            self.logger.transaction_found(tx['signature'], tx.get('swap_type', 'unknown'))
+            if not transactions:
+                return
             
-            # Анализируем прибыльность
-            if self.config['save_transaction_details']:
-                analysis = await self.analyze_transaction_profitability(tx)
+            processed_count = 0
+            for tx in transactions:
+                if tx['signature'] in self.processed_txs:
+                    continue
                 
-                # Сохраняем анализ
-                self._save_transaction_analysis(tx, analysis)
-                
-                # Логгируем интересные находки
-                if analysis.get('meme_coin_purchase'):
-                    tokens = tx.get('tokens_involved', [])
-                    self.logger.info(f"🎯 Покупка мем-коина: {tokens}")
+                try:
+                    age = tx.get('age_seconds', 0)
+                    self.logger.transaction_found(
+                        tx['signature'], 
+                        f"{tx.get('swap_type', 'unknown')} (возраст: {age}с)"
+                    )
+                    
+                    # Отправляем сигнал в Paper Trading если доступен
+                    await self._send_trading_signal(tx, wallet)
+                    
+                    # Анализируем прибыльность
+                    if self.config['save_transaction_details']:
+                        analysis = await self.analyze_transaction_profitability(tx)
+                        
+                        # Сохраняем анализ
+                        self._save_transaction_analysis(tx, analysis)
+                        
+                        # Логгируем интересные находки
+                        if analysis.get('meme_coin_purchase'):
+                            tokens = tx.get('tokens_involved', [])
+                            self.logger.info(f"🎯 Покупка мем-коина: {tokens} (свежая: {age}с)")
+                    
+                    # Отмечаем как обработанную
+                    self._save_processed_tx(tx['signature'])
+                    processed_count += 1
+                    
+                except Exception as e:
+                    self.logger.warning(f"Ошибка обработки транзакции {tx.get('signature', 'unknown')}: {e}")
+                    continue
             
-            # Отмечаем как обработанную
-            self._save_processed_tx(tx['signature'])
+            if processed_count > 0:
+                self.logger.info(f"🔥 Обработано {processed_count} свежих транзакций")
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка мониторинга кошелька {address}: {e}")
+    
+    async def _send_trading_signal(self, tx: Dict, wallet: Dict):
+        """Отправка сигнала в Paper Trading систему"""
+        try:
+            # Проверяем возраст транзакции
+            age = tx.get('age_seconds', 999)
+            if age > self.config['max_age_seconds']:
+                return
+            
+            # Формируем сигнал для Paper Trading
+            signal_data = {
+                'signature': tx['signature'],
+                'timestamp': tx['timestamp'],
+                'wallet_address': wallet['address'],
+                'wallet_name': wallet.get('name', 'Unknown'),
+                'token_changes': tx.get('token_changes', []),
+                'swap_type': tx.get('swap_type'),
+                'tokens_involved': tx.get('tokens_involved', []),
+                'age_seconds': age,
+                'source': 'dex_follower'
+            }
+            
+            # Здесь будет интеграция с Paper Trading
+            # Пока логгируем сигнал
+            if signal_data['token_changes']:
+                self.logger.info(f"📡 Сигнал для трейдинга: {signal_data['swap_type']} ({age}с)")
+            
+        except Exception as e:
+            self.logger.warning(f"Ошибка отправки сигнала: {e}")
     
     def _save_transaction_analysis(self, tx: Dict, analysis: Dict):
         """Сохранение анализа транзакции"""
@@ -439,24 +511,34 @@ class DexFollower:
             self.logger.error(f"Ошибка сохранения анализа: {e}")
     
     async def monitor_all_wallets(self):
-        """Мониторинг всех кошельков"""
+        """Мониторинг всех кошельков в режиме реального времени"""
+        self.logger.info(f"🔥 Запуск REAL-TIME мониторинга {len(self.monitored_wallets)} кошельков")
+        self.logger.info(f"⚡ Интервал сканирования: {self.config['monitor_interval']}с")
+        self.logger.info(f"🕒 Максимальный возраст транзакций: {self.config['max_age_seconds']}с")
+        
         while True:
             try:
-                self.logger.info(f"\n{'='*60}")
-                self.logger.info(f"🔍 Сканирование {len(self.monitored_wallets)} Solana кошельков...")
+                start_time = time.time()
                 
                 for wallet in self.monitored_wallets:
                     await self.monitor_wallet(wallet)
                 
-                self.logger.info(f"⏰ Ожидание {self.config['monitor_interval']} секунд...")
+                # Рассчитываем время выполнения
+                execution_time = time.time() - start_time
+                
+                # Логгируем только если есть активность или каждые 10 циклов
+                if execution_time > 1 or int(time.time()) % 60 == 0:  # Каждую минуту
+                    self.logger.info(f"🔄 Цикл завершен за {execution_time:.1f}с")
+                
+                # Ждем до следующего цикла
                 await asyncio.sleep(self.config['monitor_interval'])
                 
             except KeyboardInterrupt:
-                self.logger.info("Мониторинг остановлен пользователем")
+                self.logger.info("Real-time мониторинг остановлен пользователем")
                 break
             except Exception as e:
-                self.logger.error(f"Ошибка в цикле мониторинга: {e}")
-                await asyncio.sleep(60)  # Ждем перед повтором
+                self.logger.error(f"Ошибка в цикле real-time мониторинга: {e}")
+                await asyncio.sleep(10)  # Короткая пауза при ошибке
     
     def print_statistics(self):
         """Вывод статистики по собранным данным"""

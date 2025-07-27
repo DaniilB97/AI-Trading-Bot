@@ -1,0 +1,14 @@
+{
+  "monitor_interval": 20,
+  "analyze_patterns": false,
+  "min_transaction_amount_sol": 0.1,
+  "track_meme_coins": true,
+  "profitability_threshold": 1.5,
+  "max_transactions_per_scan": 50,
+  "save_transaction_details": true,
+  "programs_to_track": [
+    "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+    "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+    "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+  ]
+}

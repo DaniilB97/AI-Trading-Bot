@@ -1,0 +1,22 @@
+{
+  "collection_settings": {
+    "max_transactions_per_wallet": 1000,
+    "days_back": 30,
+    "batch_size": 50,
+    "delay_between_batches": 1.0,
+    "retry_failed": true,
+    "skip_errors": true
+  },
+  "filtering": {
+    "min_amount_sol": 0.01,
+    "include_failed_txs": false,
+    "dex_programs_only": true,
+    "meme_coins_priority": true
+  },
+  "analysis": {
+    "calculate_pnl": true,
+    "track_token_prices": true,
+    "identify_patterns": true,
+    "save_detailed_logs": true
+  }
+}

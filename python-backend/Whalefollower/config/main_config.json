@@ -1,0 +1,30 @@
+{
+  "services": {
+    "whale_follower": {
+      "enabled": true,
+      "monitor_interval": 30
+    },
+    "dex_follower": {
+      "enabled": true,
+      "monitor_interval": 20
+    },
+    "dex_data_collector": {
+      "enabled": true,
+      "auto_collect": false
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "log_to_file": true
+  },
+  "data_collection": {
+    "save_raw_data": true,
+    "analyze_patterns": false
+  },
+  "general": {
+    "timezone": "UTC",
+    "max_concurrent_services": 3,
+    "error_retry_attempts": 3,
+    "health_check_interval": 300
+  }
+}

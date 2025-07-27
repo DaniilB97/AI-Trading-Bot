@@ -48,7 +48,7 @@ class DexDataCollector:
             "collection_settings": {
                 "max_transactions_per_wallet": 1000,  # Максимум транзакций на кошелек
                 "days_back": 30,  # Сколько дней назад собирать
-                "batch_size": 50,  # Транзакций за один запрос
+                "batch_size": 100,  # Транзакций за один запрос
                 "delay_between_batches": 1.0,  # Секунд между батчами
                 "retry_failed": True,
                 "skip_errors": True
@@ -247,8 +247,9 @@ class DexDataCollector:
     async def _process_transaction_batch(self, signatures: List[str], wallet_address: str) -> List[Dict]:
         """Обработка батча транзакций"""
         processed = []
+        errors = 0
         
-        for signature in signatures:
+        for i, signature in enumerate(signatures):
             try:
                 self._rate_limit_rpc()
                 
@@ -263,11 +264,24 @@ class DexDataCollector:
                         tx_details['collected_at'] = datetime.now().isoformat()
                         
                         processed.append(tx_details)
+                        
+                        # Лог каждые 10 транзакций
+                        if (i + 1) % 10 == 0:
+                            self.logger.debug(f"Обработано {i + 1}/{len(signatures)} транзакций в батче")
                 
             except Exception as e:
+                errors += 1
                 if not self.config['collection_settings']['skip_errors']:
                     raise
-                self.logger.warning(f"Пропуск транзакции {signature}: {e}")
+                self.logger.warning(f"Пропуск транзакции {signature[:20]}...: {e}")
+                
+                # Если слишком много ошибок, прерываем
+                if errors > len(signatures) * 0.5:  # Больше 50% ошибок
+                    self.logger.error(f"Слишком много ошибок в батче ({errors}/{len(signatures)}), прерываем")
+                    break
+        
+        if errors > 0:
+            self.logger.warning(f"Батч завершен с {errors} ошибками")
         
         return processed
     
@@ -324,26 +338,35 @@ class DexDataCollector:
             # Определяем DEX программы
             dex_programs = []
             for instruction in instructions:
-                program_idx = instruction.get('programIdIndex', 0)
-                if program_idx < len(account_keys):
-                    program_id = account_keys[program_idx]
-                    if self._is_dex_program(program_id):
-                        dex_programs.append(program_id)
+                try:
+                    program_idx = instruction.get('programIdIndex', 0)
+                    if program_idx < len(account_keys):
+                        program_id = account_keys[program_idx]
+                        if self._is_dex_program(program_id):
+                            dex_programs.append(program_id)
+                except (KeyError, IndexError, TypeError):
+                    continue
             
             parsed['dex_programs'] = dex_programs
             parsed['is_dex_transaction'] = len(dex_programs) > 0
             
-            # Анализ токенов
-            pre_token_balances = meta.get('preTokenBalances', [])
-            post_token_balances = meta.get('postTokenBalances', [])
-            
-            token_changes = self._calculate_token_changes(pre_token_balances, post_token_balances)
-            parsed['token_changes'] = token_changes
-            
-            # Определяем тип свапа
-            if len(token_changes) >= 2:
-                parsed['swap_type'] = self._determine_swap_type(token_changes)
-                parsed['tokens_involved'] = list(set(change['mint'] for change in token_changes))
+            # Анализ токенов (с защитой от ошибок)
+            try:
+                pre_token_balances = meta.get('preTokenBalances', [])
+                post_token_balances = meta.get('postTokenBalances', [])
+                
+                token_changes = self._calculate_token_changes(pre_token_balances, post_token_balances)
+                parsed['token_changes'] = token_changes
+                
+                # Определяем тип свапа
+                if len(token_changes) >= 2:
+                    parsed['swap_type'] = self._determine_swap_type(token_changes)
+                    parsed['tokens_involved'] = list(set(change['mint'] for change in token_changes if change.get('mint')))
+                
+            except Exception as e:
+                self.logger.warning(f"Ошибка анализа токенов в транзакции {signature}: {e}")
+                parsed['token_changes'] = []
+                parsed['tokens_involved'] = []
             
             return parsed
             
@@ -380,51 +403,66 @@ class DexDataCollector:
         """Расчет изменений токенов"""
         changes = []
         
-        # Создаем индексы для быстрого поиска
-        pre_dict = {}
-        post_dict = {}
-        
-        for balance in pre_balances:
-            key = f"{balance['accountIndex']}_{balance.get('mint', 'SOL')}"
-            pre_dict[key] = balance
-        
-        for balance in post_balances:
-            key = f"{balance['accountIndex']}_{balance.get('mint', 'SOL')}"
-            post_dict[key] = balance
-        
-        # Находим изменения
-        all_keys = set(pre_dict.keys()) | set(post_dict.keys())
-        
-        for key in all_keys:
-            pre = pre_dict.get(key)
-            post = post_dict.get(key)
+        try:
+            # Создаем индексы для быстрого поиска
+            pre_dict = {}
+            post_dict = {}
             
-            pre_amount = 0
-            post_amount = 0
-            mint = None
-            account_index = None
+            for balance in pre_balances:
+                key = f"{balance['accountIndex']}_{balance.get('mint', 'SOL')}"
+                pre_dict[key] = balance
             
-            if pre:
-                pre_amount = float(pre.get('uiTokenAmount', {}).get('uiAmount', 0))
-                mint = pre.get('mint')
-                account_index = pre.get('accountIndex')
+            for balance in post_balances:
+                key = f"{balance['accountIndex']}_{balance.get('mint', 'SOL')}"
+                post_dict[key] = balance
             
-            if post:
-                post_amount = float(post.get('uiTokenAmount', {}).get('uiAmount', 0))
-                mint = mint or post.get('mint')
-                account_index = account_index or post.get('accountIndex')
+            # Находим изменения
+            all_keys = set(pre_dict.keys()) | set(post_dict.keys())
             
-            if pre_amount != post_amount:
-                changes.append({
-                    'account_index': account_index,
-                    'mint': mint,
-                    'pre_amount': pre_amount,
-                    'post_amount': post_amount,
-                    'change': post_amount - pre_amount,
-                    'is_increase': post_amount > pre_amount
-                })
-        
-        return changes
+            for key in all_keys:
+                try:
+                    pre = pre_dict.get(key)
+                    post = post_dict.get(key)
+                    
+                    pre_amount = 0.0
+                    post_amount = 0.0
+                    mint = None
+                    account_index = None
+                    
+                    if pre:
+                        ui_amount = pre.get('uiTokenAmount', {}).get('uiAmount')
+                        pre_amount = float(ui_amount) if ui_amount is not None else 0.0
+                        mint = pre.get('mint')
+                        account_index = pre.get('accountIndex')
+                    
+                    if post:
+                        ui_amount = post.get('uiTokenAmount', {}).get('uiAmount')
+                        post_amount = float(ui_amount) if ui_amount is not None else 0.0
+                        mint = mint or post.get('mint')
+                        account_index = account_index or post.get('accountIndex')
+                    
+                    # Пропускаем если нет значимых изменений
+                    if abs(pre_amount - post_amount) < 1e-9:
+                        continue
+                    
+                    changes.append({
+                        'account_index': account_index,
+                        'mint': mint,
+                        'pre_amount': pre_amount,
+                        'post_amount': post_amount,
+                        'change': post_amount - pre_amount,
+                        'is_increase': post_amount > pre_amount
+                    })
+                    
+                except Exception as e:
+                    self.logger.warning(f"Ошибка обработки изменения токена {key}: {e}")
+                    continue
+            
+            return changes
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка расчета изменений токенов: {e}")
+            return []
     
     def _determine_swap_type(self, token_changes: List[Dict]) -> str:
         """Определение типа свапа"""
@@ -437,6 +475,228 @@ class DexDataCollector:
             return "complex_swap"
         else:
             return "unknown"
+    
+    async def _analyze_wallet_history(self, transactions: List[Dict], wallet: Dict) -> Dict:
+        """Анализ истории торговли кошелька"""
+        analysis = {
+            'wallet_address': wallet['address'],
+            'wallet_name': wallet.get('name', 'Unknown'),
+            'analysis_date': datetime.now().isoformat(),
+            'total_transactions': len(transactions),
+            'dex_transactions': len([tx for tx in transactions if tx.get('is_dex_transaction')]),
+            'successful_transactions': len([tx for tx in transactions if tx['status'] == 'success']),
+            'failed_transactions': len([tx for tx in transactions if tx['status'] != 'success']),
+            'time_range': {
+                'earliest': None,
+                'latest': None
+            },
+            'trading_patterns': {},
+            'tokens_traded': [],
+            'profitability_analysis': {}
+        }
+        
+        if transactions:
+            # Временной диапазон
+            timestamps = [tx['blockTime'] for tx in transactions if tx.get('blockTime')]
+            if timestamps:
+                analysis['time_range']['earliest'] = min(timestamps)
+                analysis['time_range']['latest'] = max(timestamps)
+            
+            # Анализ токенов
+            all_tokens = set()
+            for tx in transactions:
+                tokens = tx.get('tokens_involved', [])
+                all_tokens.update(tokens)
+            
+            analysis['tokens_traded'] = list(all_tokens)
+            analysis['unique_tokens_count'] = len(all_tokens)
+            
+            # Простые паттерны
+            swap_types = [tx.get('swap_type') for tx in transactions if tx.get('swap_type')]
+            analysis['trading_patterns'] = {
+                'swap_types': list(set(swap_types)),
+                'most_common_swap_type': max(set(swap_types), key=swap_types.count) if swap_types else None,
+                'avg_transactions_per_day': self._calculate_avg_transactions_per_day(transactions)
+            }
+            
+            # TODO: Здесь будет более сложный анализ прибыльности
+            # analysis['profitability_analysis'] = await self._calculate_profitability(transactions)
+        
+        return analysis
+    
+    def _calculate_avg_transactions_per_day(self, transactions: List[Dict]) -> float:
+        """Расчет среднего количества транзакций в день"""
+        timestamps = [tx['blockTime'] for tx in transactions if tx.get('blockTime')]
+        
+        if len(timestamps) < 2:
+            return 0
+        
+        min_time = min(timestamps)
+        max_time = max(timestamps)
+        days = (max_time - min_time) / (24 * 60 * 60)  # Секунды в дни
+        
+        return len(transactions) / max(days, 1)
+    
+    async def _save_wallet_data(self, address: str, transactions: List[Dict], analysis: Dict):
+        """Сохранение данных кошелька"""
+        wallet_dir = os.path.join(self.historical_data_dir, address)
+        os.makedirs(wallet_dir, exist_ok=True)
+        
+        # Сохраняем транзакции
+        transactions_file = os.path.join(wallet_dir, "transactions.json")
+        with open(transactions_file, 'w') as f:
+            json.dump(transactions, f, indent=2, default=str)
+        
+        # Сохраняем анализ
+        analysis_file = os.path.join(wallet_dir, "analysis.json")
+        with open(analysis_file, 'w') as f:
+            json.dump(analysis, f, indent=2, default=str)
+        
+        # Сохраняем краткую сводку
+        summary = {
+            'wallet_address': address,
+            'collection_date': datetime.now().isoformat(),
+            'total_transactions': len(transactions),
+            'dex_transactions': analysis.get('dex_transactions', 0),
+            'unique_tokens': analysis.get('unique_tokens_count', 0),
+            'time_range': analysis.get('time_range', {}),
+            'file_paths': {
+                'transactions': transactions_file,
+                'analysis': analysis_file
+            }
+        }
+        
+        summary_file = os.path.join(wallet_dir, "summary.json")
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2, default=str)
+        
+        self.logger.data_saved(wallet_dir, len(transactions))
+    
+    async def collect_all_wallets_history(self):
+        """Сбор истории для всех кошельков"""
+        try:
+            with open(self.wallets_file, 'r') as f:
+                wallets = json.load(f)
+        except FileNotFoundError:
+            self.logger.error(f"Файл кошельков не найден: {self.wallets_file}")
+            return
+        
+        self.logger.info(f"📊 Начинаем сбор истории для {len(wallets)} кошельков")
+        
+        results = []
+        start_time = datetime.now()
+        
+        for i, wallet in enumerate(wallets, 1):
+            self.logger.info(f"\n{'='*60}")
+            self.logger.info(f"Кошелек {i}/{len(wallets)}: {wallet.get('name', 'Unknown')}")
+            
+            wallet_start = datetime.now()
+            result = await self.collect_wallet_history(wallet)
+            wallet_duration = (datetime.now() - wallet_start).total_seconds() / 60
+            
+            result['duration_minutes'] = wallet_duration
+            results.append(result)
+            
+            # Промежуточная статистика
+            successful = len([r for r in results if r['status'] == 'success'])
+            total_txs = sum(r.get('transactions_collected', 0) for r in results)
+            
+            self.logger.info(f"⏱️  Кошелек обработан за {wallet_duration:.1f} мин")
+            self.logger.info(f"📊 Прогресс: {successful}/{i} успешно, {total_txs} транзакций")
+            
+            # Пауза между кошельками (кроме последнего)
+            if i < len(wallets):
+                pause_time = 5
+                self.logger.info(f"⏳ Пауза {pause_time}с между кошельками...")
+                await asyncio.sleep(pause_time)
+        
+        # Финальная статистика
+        total_duration = (datetime.now() - start_time).total_seconds() / 60
+        successful = len([r for r in results if r['status'] == 'success'])
+        total_transactions = sum(r.get('transactions_collected', 0) for r in results)
+        
+        self.logger.info(f"\n🎉 СБОР ЗАВЕРШЕН!")
+        self.logger.info(f"⏱️  Общее время: {total_duration:.1f} минут")
+        self.logger.info(f"✅ Успешно: {successful}/{len(wallets)} кошельков")
+        self.logger.info(f"📊 Всего собрано: {total_transactions} транзакций")
+        
+        # Сохраняем общий отчет
+        final_report = {
+            'collection_date': datetime.now().isoformat(),
+            'total_wallets': len(wallets),
+            'successful_wallets': successful,
+            'total_transactions_collected': total_transactions,
+            'duration_minutes': total_duration,
+            'wallets_results': results
+        }
+        
+        report_file = os.path.join("data", "collection_report.json")
+        with open(report_file, 'w') as f:
+            json.dump(final_report, f, indent=2, default=str)
+        
+        self.logger.info(f"📋 Отчет сохранен: {report_file}")
+        
+        return results
+    
+    def print_collection_status(self):
+        """Вывод статуса сбора данных"""
+        print(f"\n📊 СТАТУС СБОРА ИСТОРИЧЕСКИХ ДАННЫХ")
+        print("="*60)
+        
+        if not self.collection_status:
+            print("❌ Сбор данных еще не запускался")
+            return
+        
+        total_wallets = len(self.collection_status)
+        completed_wallets = len([w for w in self.collection_status.values() if w.get('analysis_completed')])
+        total_transactions = sum(w.get('successful_transactions', 0) for w in self.collection_status.values())
+        
+        print(f"📋 Кошельков обработано: {completed_wallets}/{total_wallets}")
+        print(f"💾 Всего транзакций собрано: {total_transactions}")
+        
+        if completed_wallets > 0:
+            avg_txs = total_transactions / completed_wallets
+            print(f"📊 Среднее транзакций на кошелек: {avg_txs:.1f}")
+        
+        # Детали по кошелькам
+        print(f"\n📋 Детали по кошелькам:")
+        for address, status in list(self.collection_status.items())[:10]:  # Показываем первые 10
+            name = f"({address[:8]}...{address[-4:]})"
+            date = status.get('last_collection_date', 'Не завершен')[:16]
+            txs = status.get('successful_transactions', 0)
+            duration = status.get('collection_duration_minutes', 0)
+            
+            print(f"  • {name:15s}: {txs:4d} тx, {duration:5.1f} мин ({date})")
+        
+        if len(self.collection_status) > 10:
+            print(f"  ... и еще {len(self.collection_status) - 10} кошельков")
+        
+        # Проверяем наличие файлов данных
+        data_dir = self.historical_data_dir
+        if os.path.exists(data_dir):
+            wallet_dirs = [d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
+            print(f"\n💾 Файлы данных: {len(wallet_dirs)} папок в {data_dir}")
+        else:
+            print(f"\n💾 Папка данных не создана: {data_dir}")
+    
+    def get_wallet_summary(self, wallet_address: str) -> Optional[Dict]:
+        """Получить краткую сводку по кошельку"""
+        wallet_dir = os.path.join(self.historical_data_dir, wallet_address)
+        summary_file = os.path.join(wallet_dir, "summary.json")
+        
+        try:
+            with open(summary_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return None
+    
+    def list_collected_wallets(self) -> List[str]:
+        """Список кошельков с собранными данными"""
+        if not os.path.exists(self.historical_data_dir):
+            return []
+        
+        return [d for d in os.listdir(self.historical_data_dir) 
+                if os.path.isdir(os.path.join(self.historical_data_dir, d))]
     
     async def _analyze_wallet_history(self, transactions: List[Dict], wallet: Dict) -> Dict:
         """Анализ истории торговли кошелька"""

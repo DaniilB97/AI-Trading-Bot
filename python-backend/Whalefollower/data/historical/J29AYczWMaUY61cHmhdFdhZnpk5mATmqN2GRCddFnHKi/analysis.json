@@ -1,0 +1,16 @@
+{
+  "wallet_address": "J29AYczWMaUY61cHmhdFdhZnpk5mATmqN2GRCddFnHKi",
+  "wallet_name": "Meme Trader #1",
+  "analysis_date": "2025-07-27T22:32:57.347920",
+  "total_transactions": 0,
+  "dex_transactions": 0,
+  "successful_transactions": 0,
+  "failed_transactions": 0,
+  "time_range": {
+    "earliest": null,
+    "latest": null
+  },
+  "trading_patterns": {},
+  "tokens_traded": [],
+  "profitability_analysis": {}
+}

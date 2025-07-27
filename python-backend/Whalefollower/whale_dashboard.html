@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whale Signal Orchestrator Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0D1117 0%, #161B22 100%);
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(13, 17, 23, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 8px 32px rgba(56, 189, 248, 0.1);
+            transform: translateY(-2px);
+        }
+        .service-card {
+            background: rgba(13, 17, 23, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .service-card:hover {
+            border-color: rgba(34, 197, 94, 0.5);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+        }
+        .status-active {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        .status-inactive {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .status-warning {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .pulse-green {
+            animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        /* Скроллбар */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.5);
+            border-radius: 3px;
+        }
+        .log-entry {
+            border-left: 3px solid transparent;
+            padding-left: 12px;
+        }
+        .log-info { border-left-color: #3b82f6; }
+        .log-success { border-left-color: #22c55e; }
+        .log-warning { border-left-color: #f59e0b; }
+        .log-error { border-left-color: #ef4444; }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+    <div class="max-w-screen-2xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
+            <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-sky-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+                    🐋 Whale Signal Orchestrator
+                </h1>
+                <p class="text-gray-400 text-lg mt-2">Мониторинг китов и DEX торговцев в реальном времени</p>
+            </div>
+            <div id="connection-status" class="flex items-center space-x-3">
+                <div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse"></div>
+                <span class="text-yellow-400 font-medium">Подключение к API...</span>
+            </div>
+        </header>
+
+        <!-- Service Status Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- ETH Whale Follower -->
+            <div class="service-card p-6 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-blue-500/20 rounded-lg">
+                            <i data-lucide="trending-up" class="w-6 h-6 text-blue-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">ETH Whale Follower</h3>
+                    </div>
+                    <span id="whale-status" class="px-3 py-1 rounded-full text-xs font-medium status-inactive">Offline</span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Кошельков:</span>
+                        <span id="whale-wallets" class="text-white font-medium">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Транзакций:</span>
+                        <span id="whale-transactions" class="text-white font-medium">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Автоторговля:</span>
+                        <span id="whale-auto" class="text-white font-medium">Выкл</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solana DEX Follower -->
+            <div class="service-card p-6 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-purple-500/20 rounded-lg">
+                            <i data-lucide="zap" class="w-6 h-6 text-purple-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Solana DEX Follower</h3>
+                    </div>
+                    <span id="dex-status" class="px-3 py-1 rounded-full text-xs font-medium status-inactive">Offline</span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Кошельков:</span>
+                        <span id="dex-wallets" class="text-white font-medium">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Транзакций:</span>
+                        <span id="dex-transactions" class="text-white font-medium">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Мем-коины:</span>
+                        <span id="dex-meme" class="text-white font-medium">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Collector -->
+            <div class="service-card p-6 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-green-500/20 rounded-lg">
+                            <i data-lucide="database" class="w-6 h-6 text-green-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Data Collector</h3>
+                    </div>
+                    <span id="collector-status" class="px-3 py-1 rounded-full text-xs font-medium status-inactive">Offline</span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Собрано кошельков:</span>
+                        <span id="collector-wallets" class="text-white font-medium">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Всего транзакций:</span>
+                        <span id="collector-transactions" class="text-white font-medium">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Статус сбора:</span>
+                        <span id="collector-progress" class="text-white font-medium">Ожидание</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paper Trading -->
+            <div class="service-card p-6 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-yellow-500/20 rounded-lg">
+                            <i data-lucide="trending-up" class="w-6 h-6 text-yellow-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Paper Trading</h3>
+                    </div>
+                    <span id="trading-status" class="px-3 py-1 rounded-full text-xs font-medium status-inactive">Offline</span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Portfolio Value:</span>
+                        <span id="trading-portfolio" class="text-white font-medium">$0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Total P&L:</span>
+                        <span id="trading-pnl" class="text-white font-medium">$0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Open Positions:</span>
+                        <span id="trading-positions" class="text-white font-medium">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Controls & Wallets -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Control Panel -->
+                <div class="glass-card p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                        <i data-lucide="settings" class="w-5 h-5 mr-3 text-sky-400"></i>
+                        Управление
+                    </h2>
+                    <div class="space-y-4">
+                        <button id="start-all-btn" class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            <span>Запустить все сервисы</span>
+                        </button>
+                        <button id="stop-all-btn" class="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="square" class="w-4 h-4"></i>
+                            <span>Остановить все</span>
+                        </button>
+                        <button id="collect-data-btn" class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>Собрать данные</span>
+                        </button>
+                        <button id="settings-btn" class="w-full px-4 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-medium rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="cog" class="w-4 h-4"></i>
+                            <span>Настройки</span>
+                        </button>
+                        <button id="add-wallet-btn" class="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Добавить кошелек</span>
+                        </button>
+                        <button id="toggle-trading-btn" class="w-full px-4 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-medium rounded-lg hover:from-yellow-600 hover:to-orange-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i>
+                            <span>Toggle Paper Trading</span>
+                        </button>
+                        <button id="reset-portfolio-btn" class="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            <span>Reset Portfolio</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Wallet Lists -->
+                <div class="glass-card p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                        <i data-lucide="wallet" class="w-5 h-5 mr-3 text-sky-400"></i>
+                        Отслеживаемые кошельки
+                    </h2>
+                    
+                    <!-- Tabs -->
+                    <div class="flex space-x-1 mb-4">
+                        <button id="tab-eth" class="tab-button active px-4 py-2 rounded-lg text-sm font-medium transition-all">ETH Киты</button>
+                        <button id="tab-sol" class="tab-button px-4 py-2 rounded-lg text-sm font-medium transition-all">Solana DEX</button>
+                    </div>
+
+                    <!-- Wallet Content -->
+                    <div id="wallets-content" class="max-h-96 overflow-y-auto space-y-3">
+                        <div class="text-center text-gray-400 py-8">
+                            <i data-lucide="loader-2" class="w-8 h-8 mx-auto mb-2 animate-spin"></i>
+                            <p>Загрузка кошельков...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Analytics & Logs -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Analytics Chart -->
+                <div class="glass-card p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3 text-sky-400"></i>
+                        Аналитика активности
+                    </h2>
+                    <div class="h-80">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="glass-card p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                        <i data-lucide="activity" class="w-5 h-5 mr-3 text-sky-400"></i>
+                        Последние транзакции
+                    </h2>
+                    <div id="recent-transactions" class="space-y-3 max-h-64 overflow-y-auto">
+                        <div class="text-center text-gray-400 py-8">
+                            <p>Нет данных о транзакциях</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paper Trading Portfolio -->
+                <div class="glass-card p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                        <i data-lucide="briefcase" class="w-5 h-5 mr-3 text-sky-400"></i>
+                        Paper Trading Portfolio
+                    </h2>
+                    <div id="portfolio-content" class="space-y-4">
+                        <div class="text-center text-gray-400 py-8">
+                            <p>Paper Trading не активен</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Logs -->
+                <div class="glass-card p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                        <i data-lucide="terminal" class="w-5 h-5 mr-3 text-sky-400"></i>
+                        Системные логи
+                    </h2>
+                    <div id="system-logs" class="bg-gray-900/50 rounded-lg p-4 h-64 overflow-y-auto font-mono text-xs">
+                        <!-- Логи будут добавляться здесь -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="glass-card p-8 rounded-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Настройки скорости обработки</h2>
+                <button id="close-settings" class="text-gray-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Data Collector Settings -->
+                <div class="bg-gray-900/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-white mb-4">Data Collector (Solana)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">RPC Delay (сек)</label>
+                            <input id="dc-rpc-delay" type="number" step="0.1" min="0.1" max="5" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="0.2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Batch Size</label>
+                            <input id="dc-batch-size" type="number" min="10" max="200" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Batch Delay (сек)</label>
+                            <input id="dc-batch-delay" type="number" step="0.5" min="0.5" max="10" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="1.0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Max Transactions</label>
+                            <input id="dc-max-transactions" type="number" min="100" max="5000" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="1000">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DEX Follower Settings -->
+                <div class="bg-gray-900/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-white mb-4">DEX Follower (Real-time)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">RPC Delay (сек)</label>
+                            <input id="df-rpc-delay" type="number" step="0.1" min="0.1" max="2" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="0.1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Monitor Interval (сек)</label>
+                            <input id="df-monitor-interval" type="number" min="10" max="300" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="20">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Whale Follower Settings -->
+                <div class="bg-gray-900/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-white mb-4">Whale Follower (Ethereum)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Etherscan Delay (сек)</label>
+                            <input id="wf-etherscan-delay" type="number" step="0.1" min="0.2" max="2" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="0.25">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Monitor Interval (сек)</label>
+                            <input id="wf-monitor-interval" type="number" min="15" max="300" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-4 mt-6">
+                <button id="save-settings" class="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all">
+                    Сохранить настройки
+                </button>
+                <button id="reset-settings" class="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-medium rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all">
+                    Сбросить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Wallet Modal -->
+    <div id="add-wallet-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="glass-card p-8 rounded-xl max-w-lg w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Добавить кошелек</h2>
+                <button id="close-add-wallet" class="text-gray-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <form id="add-wallet-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Сеть</label>
+                    <select id="wallet-chain" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none">
+                        <option value="solana">Solana</option>
+                        <option value="eth">Ethereum</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Адрес кошелька</label>
+                    <input id="wallet-address" type="text" required class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="Введите адрес кошелька">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Название</label>
+                    <input id="wallet-name" type="text" required class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="Название трейдера">
+                </div>
+                
+                <div id="solana-fields">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Категория</label>
+                        <select id="wallet-category" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none">
+                            <option value="meme_trader">Meme Trader</option>
+                            <option value="arbitrage_trader">Arbitrage Trader</option>
+                            <option value="early_investor">Early Investor</option>
+                            <option value="defi_farmer">DeFi Farmer</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Win Rate (0-1)</label>
+                        <input id="wallet-winrate" type="number" step="0.01" min="0" max="1" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" placeholder="0.75">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Заметки</label>
+                    <textarea id="wallet-notes" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-sky-500 focus:outline-none" rows="3" placeholder="Дополнительная информация о трейдере"></textarea>
+                </div>
+            </form>
+            
+            <div class="flex space-x-4 mt-6">
+                <button id="save-wallet" class="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all">
+                    Добавить кошелек
+                </button>
+                <button id="cancel-add-wallet" class="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-medium rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all">
+                    Отмена
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="notification" class="fixed top-4 right-4 transform translate-x-full transition-transform duration-300 z-50">
+        <div class="glass-card p-4 rounded-lg max-w-sm">
+            <div class="flex items-center space-x-3">
+                <div id="notification-icon" class="w-6 h-6"></div>
+                <div>
+                    <p id="notification-title" class="font-medium text-white"></p>
+                    <p id="notification-message" class="text-sm text-gray-400"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize icons
+    lucide.createIcons();
+    
+    // Configuration
+    const API_BASE_URL = "http://localhost:8000"; // Python backend
+    
+    // UI Elements
+    const ui = {
+        connectionStatus: document.getElementById('connection-status'),
+        whaleStatus: document.getElementById('whale-status'),
+        whaleWallets: document.getElementById('whale-wallets'),
+        whaleTransactions: document.getElementById('whale-transactions'),
+        whaleAuto: document.getElementById('whale-auto'),
+        dexStatus: document.getElementById('dex-status'),
+        dexWallets: document.getElementById('dex-wallets'),
+        dexTransactions: document.getElementById('dex-transactions'),
+        dexMeme: document.getElementById('dex-meme'),
+        collectorStatus: document.getElementById('collector-status'),
+        collectorWallets: document.getElementById('collector-wallets'),
+        collectorTransactions: document.getElementById('collector-transactions'),
+        collectorProgress: document.getElementById('collector-progress'),
+        walletsContent: document.getElementById('wallets-content'),
+        systemLogs: document.getElementById('system-logs'),
+        recentTransactions: document.getElementById('recent-transactions'),
+        tabEth: document.getElementById('tab-eth'),
+        tabSol: document.getElementById('tab-sol'),
+        startAllBtn: document.getElementById('start-all-btn'),
+        stopAllBtn: document.getElementById('stop-all-btn'),
+        collectDataBtn: document.getElementById('collect-data-btn'),
+        settingsBtn: document.getElementById('settings-btn'),
+        addWalletBtn: document.getElementById('add-wallet-btn'),
+        toggleTradingBtn: document.getElementById('toggle-trading-btn'),
+        resetPortfolioBtn: document.getElementById('reset-portfolio-btn'),
+        portfolioContent: document.getElementById('portfolio-content'),
+        // Trading status elements
+        tradingStatus: document.getElementById('trading-status'),
+        tradingPortfolio: document.getElementById('trading-portfolio'),
+        tradingPnl: document.getElementById('trading-pnl'),
+        tradingPositions: document.getElementById('trading-positions'),
+        // Modal elements
+        settingsModal: document.getElementById('settings-modal'),
+        addWalletModal: document.getElementById('add-wallet-modal'),
+        closeSettings: document.getElementById('close-settings'),
+        closeAddWallet: document.getElementById('close-add-wallet'),
+        saveSettings: document.getElementById('save-settings'),
+        saveWallet: document.getElementById('save-wallet'),
+        // Form elements
+        walletChain: document.getElementById('wallet-chain'),
+        walletAddress: document.getElementById('wallet-address'),
+        walletName: document.getElementById('wallet-name'),
+        walletCategory: document.getElementById('wallet-category'),
+        walletWinrate: document.getElementById('wallet-winrate'),
+        walletNotes: document.getElementById('wallet-notes'),
+        solanaFields: document.getElementById('solana-fields')
+    };
+
+    // Current tab state
+    let currentTab = 'eth';
+
+    // Chart setup
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    const activityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'ETH Транзакции',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Solana Транзакции',
+                    data: [],
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#c9d1d9' }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#9ca3af' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: {
+                    ticks: { color: '#9ca3af' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            }
+        }
+    });
+
+    // Tab switching
+    ui.tabEth.addEventListener('click', () => {
+        currentTab = 'eth';
+        ui.tabEth.classList.add('active', 'bg-sky-500', 'text-white');
+        ui.tabEth.classList.remove('text-gray-400');
+        ui.tabSol.classList.remove('active', 'bg-sky-500', 'text-white');
+        ui.tabSol.classList.add('text-gray-400');
+        fetchWallets();
+    });
+
+    function renderRecentTransactions(transactions) {
+        if (!transactions || transactions.length === 0) {
+            ui.recentTransactions.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <i data-lucide="activity" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p>Нет недавних транзакций</p>
+                </div>
+            `;
+            return;
+        }
+
+        const transactionsHtml = transactions.map(tx => `
+            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium text-white text-sm">${tx.type || 'Unknown'}</span>
+                    <span class="text-xs text-gray-400">${tx.timestamp}</span>
+                </div>
+                <p class="text-xs text-gray-400">${tx.description}</p>
+                <div class="flex justify-between mt-2 text-xs">
+                    <span class="text-gray-400">Wallet: ${tx.wallet?.slice(0, 8)}...</span>
+                    <span class="text-sky-400">${tx.chain}</span>
+                </div>
+            </div>
+        `).join('');
+
+        ui.recentTransactions.innerHTML = transactionsHtml;
+    }
+
+    // API Functions
+    async function fetchStatus() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/status`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Update connection status
+            ui.connectionStatus.innerHTML = `
+                <div class="w-3 h-3 rounded-full bg-green-500 pulse-green"></div>
+                <span class="text-green-400 font-medium">Подключено</span>
+            `;
+            
+            // Update service statuses
+            updateServiceStatus('whale', data.services?.whale_follower?.active || false, {
+                wallets: data.services?.whale_follower?.wallets_count,
+                transactions: data.services?.whale_follower?.processed_transactions,
+                autoTrade: data.services?.whale_follower?.auto_trade_enabled
+            });
+            
+            updateServiceStatus('dex', data.services?.dex_follower?.active || false, {
+                wallets: data.services?.dex_follower?.wallets_count,
+                transactions: data.services?.dex_follower?.processed_transactions,
+                memeCoins: data.services?.dex_follower?.meme_purchases
+            });
+            
+            updateServiceStatus('collector', data.services?.data_collector?.active || false, {
+                completedWallets: data.services?.data_collector?.completed_wallets,
+                totalTransactions: data.services?.data_collector?.total_transactions,
+                status: data.services?.data_collector?.status
+            });
+            
+            // Update chart data
+            if (data.analytics?.activity_data) {
+                updateActivityChart(data.analytics.activity_data);
+            }
+            
+            // Update recent transactions
+            if (data.recent_transactions) {
+                renderRecentTransactions(data.recent_transactions);
+            }
+            
+            // Update logs
+            if (data.recent_logs) {
+                data.recent_logs.forEach(log => addLog(log.message, log.type));
+            }
+            
+        } catch (error) {
+            console.error('Ошибка получения статуса:', error);
+            ui.connectionStatus.innerHTML = `
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <span class="text-red-400 font-medium">Ошибка подключения</span>
+            `;
+            
+            // Set all services as offline
+            updateServiceStatus('whale', false);
+            updateServiceStatus('dex', false);
+            updateServiceStatus('collector', false);
+        }
+    }
+
+    async function fetchWallets() {
+        try {
+            const endpoint = currentTab === 'eth' ? '/api/wallets/eth' : '/api/wallets/solana';
+            const response = await fetch(`${API_BASE_URL}${endpoint}`);
+            
+            if (response.ok) {
+                const wallets = await response.json();
+                renderWallets(wallets, currentTab);
+            } else {
+                throw new Error('Ошибка загрузки кошельков');
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки кошельков:', error);
+            ui.walletsContent.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <i data-lucide="wifi-off" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p>Ошибка загрузки кошельков</p>
+                </div>
+            `;
+        }
+    }
+
+    function updateActivityChart(data) {
+        if (!data || !data.labels) return;
+        
+        activityChart.data.labels = data.labels;
+        activityChart.data.datasets[0].data = data.eth_transactions || [];
+        activityChart.data.datasets[1].data = data.solana_transactions || [];
+        activityChart.update('none');
+    }
+
+    // Initialize CSS for active tab
+    function initializeTabs() {
+        ui.tabEth.classList.add('active', 'bg-sky-500', 'text-white');
+        ui.tabSol.classList.add('text-gray-400');
+    }
+
+    // Initialize app
+    function initializeApp() {
+        addLog('Инициализация Whale Signal Dashboard...', 'info');
+        initializeTabs();
+        fetchStatus();
+        fetchWallets();
+        
+        // Set up intervals
+        setInterval(fetchStatus, 5000); // Update status every 5 seconds
+        setInterval(() => {
+            if (currentTab) fetchWallets();
+        }, 30000); // Update wallets every 30 seconds
+    }
+
+    // Start the application
+    initializeApp();
+
+    ui.tabSol.addEventListener('click', () => {
+        currentTab = 'sol';
+        ui.tabSol.classList.add('active', 'bg-sky-500', 'text-white');
+        ui.tabSol.classList.remove('text-gray-400');
+        ui.tabEth.classList.remove('active', 'bg-sky-500', 'text-white');
+        ui.tabEth.classList.add('text-gray-400');
+        fetchWallets();
+    });
+
+    // Utility functions
+    function showNotification(title, message, type = 'info') {
+        const notification = document.getElementById('notification');
+        const icon = document.getElementById('notification-icon');
+        const titleEl = document.getElementById('notification-title');
+        const messageEl = document.getElementById('notification-message');
+
+        const icons = {
+            info: 'info',
+            success: 'check-circle',
+            warning: 'alert-triangle',
+            error: 'x-circle'
+        };
+
+        icon.innerHTML = `<i data-lucide="${icons[type]}" class="w-6 h-6"></i>`;
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        notification.classList.remove('translate-x-full');
+        lucide.createIcons();
+
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+        }, 5000);
+    }
+
+    function addLog(message, type = 'info') {
+        const time = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${type} py-2 border-b border-gray-800 last:border-b-0`;
+        logEntry.innerHTML = `
+            <span class="text-gray-500">${time}</span>
+            <span class="ml-2 text-gray-300">${message}</span>
+        `;
+        
+        ui.systemLogs.insertBefore(logEntry, ui.systemLogs.firstChild);
+        
+        // Limit logs
+        if (ui.systemLogs.children.length > 100) {
+            ui.systemLogs.removeChild(ui.systemLogs.lastChild);
+        }
+    }
+
+    function updateServiceStatus(service, isActive, data = {}) {
+        const statusEl = ui[`${service}Status`];
+        if (isActive) {
+            statusEl.textContent = 'Online';
+            statusEl.className = 'px-3 py-1 rounded-full text-xs font-medium status-active';
+        } else {
+            statusEl.textContent = 'Offline';
+            statusEl.className = 'px-3 py-1 rounded-full text-xs font-medium status-inactive';
+        }
+
+        // Update specific service data
+        if (service === 'whale' && data) {
+            ui.whaleWallets.textContent = data.wallets || '0';
+            ui.whaleTransactions.textContent = data.transactions || '0';
+            ui.whaleAuto.textContent = data.autoTrade ? 'Вкл' : 'Выкл';
+        } else if (service === 'dex' && data) {
+            ui.dexWallets.textContent = data.wallets || '0';
+            ui.dexTransactions.textContent = data.transactions || '0';
+            ui.dexMeme.textContent = data.memeCoins || '0';
+        } else if (service === 'collector' && data) {
+            ui.collectorWallets.textContent = data.completedWallets || '0';
+            ui.collectorTransactions.textContent = data.totalTransactions || '0';
+            ui.collectorProgress.textContent = data.status || 'Ожидание';
+        }
+    }
+
+    function renderWallets(wallets, type) {
+        if (!wallets || wallets.length === 0) {
+            ui.walletsContent.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <i data-lucide="wallet-x" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p>Нет ${type === 'eth' ? 'ETH' : 'Solana'} кошельков</p>
+                </div>
+            `;
+            return;
+        }
+
+        const walletsHtml = wallets.map(wallet => `
+            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 hover:border-sky-500 transition-all">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium text-white text-sm">${wallet.name}</span>
+                    <span class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">${wallet.category || 'unknown'}</span>
+                </div>
+                <p class="text-xs text-gray-400 font-mono">${wallet.address}</p>
+                ${wallet.estimated_win_rate ? `
+                    <div class="mt-2 flex justify-between text-xs">
+                        <span class="text-gray-400">Win Rate:</span>
+                        <span class="text-green-400 font-medium">${(wallet.estimated_win_rate * 100).toFixed(1)}%</span>
+                    </div>
+                ` : ''}
+                <div class="mt-2 flex space-x-2">
+                    <button onclick="removeWallet('${type}', '${wallet.address}')" class="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        ui.walletsContent.innerHTML = walletsHtml;
+        lucide.createIcons();
+    }
+
+    // Global function for removing wallets
+    window.removeWallet = async function(chain, address) {
+        if (!confirm('Вы уверены, что хотите удалить этот кошелек?')) {
+            return;
+        }
+
+        try {
+            const chainName = chain === 'eth' ? 'eth' : 'solana';
+            const response = await fetch(`${API_BASE_URL}/api/wallets/${chainName}/${address}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showNotification('Успех', 'Кошелек удален', 'success');
+                addLog(`Удален кошелек ${address.slice(0, 10)}... из ${chainName}`, 'warning');
+                fetchWallets(); // Refresh wallet list
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Ошибка удаления кошелька');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка удаления кошелька: ${error.message}`, 'error');
+        }
+    };
+
+    // Modal functions
+    function openSettingsModal() {
+        ui.settingsModal.classList.remove('hidden');
+        ui.settingsModal.classList.add('flex');
+        loadCurrentSettings();
+    }
+
+    function closeSettingsModal() {
+        ui.settingsModal.classList.add('hidden');
+        ui.settingsModal.classList.remove('flex');
+    }
+
+    function openAddWalletModal() {
+        ui.addWalletModal.classList.remove('hidden');
+        ui.addWalletModal.classList.add('flex');
+        updateWalletFormFields();
+    }
+
+    function closeAddWalletModal() {
+        ui.addWalletModal.classList.add('hidden');
+        ui.addWalletModal.classList.remove('flex');
+        resetWalletForm();
+    }
+
+    function updateWalletFormFields() {
+        const chain = ui.walletChain.value;
+        if (chain === 'solana') {
+            ui.solanaFields.style.display = 'block';
+        } else {
+            ui.solanaFields.style.display = 'none';
+        }
+    }
+
+    function resetWalletForm() {
+        ui.walletAddress.value = '';
+        ui.walletName.value = '';
+        ui.walletCategory.value = 'meme_trader';
+        ui.walletWinrate.value = '';
+        ui.walletNotes.value = '';
+    }
+
+    async function loadCurrentSettings() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/settings`);
+            if (response.ok) {
+                const settings = await response.json();
+                
+                // Data Collector settings
+                const dc = settings.processing_speed?.dex_data_collector || {};
+                document.getElementById('dc-rpc-delay').value = dc.rpc_delay || 0.2;
+                document.getElementById('dc-batch-size').value = dc.batch_size || 50;
+                document.getElementById('dc-batch-delay').value = dc.delay_between_batches || 1.0;
+                document.getElementById('dc-max-transactions').value = dc.max_transactions_per_wallet || 1000;
+                
+                // DEX Follower settings
+                const df = settings.processing_speed?.dex_follower || {};
+                document.getElementById('df-rpc-delay').value = df.rpc_delay || 0.1;
+                document.getElementById('df-monitor-interval').value = df.monitor_interval || 20;
+                
+                // Whale Follower settings
+                const wf = settings.processing_speed?.whale_follower || {};
+                document.getElementById('wf-etherscan-delay').value = wf.etherscan_delay || 0.25;
+                document.getElementById('wf-monitor-interval').value = wf.monitor_interval || 30;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки настроек:', error);
+            showNotification('Ошибка', 'Не удалось загрузить настройки', 'error');
+        }
+    }
+
+    async function saveSettings() {
+        try {
+            const settings = {
+                data_collector: {
+                    rpc_delay: parseFloat(document.getElementById('dc-rpc-delay').value),
+                    batch_size: parseInt(document.getElementById('dc-batch-size').value),
+                    batch_delay: parseFloat(document.getElementById('dc-batch-delay').value),
+                    max_transactions: parseInt(document.getElementById('dc-max-transactions').value)
+                },
+                dex_follower: {
+                    rpc_delay: parseFloat(document.getElementById('df-rpc-delay').value),
+                    monitor_interval: parseInt(document.getElementById('df-monitor-interval').value)
+                },
+                whale_follower: {
+                    etherscan_delay: parseFloat(document.getElementById('wf-etherscan-delay').value),
+                    monitor_interval: parseInt(document.getElementById('wf-monitor-interval').value)
+                }
+            };
+
+            const response = await fetch(`${API_BASE_URL}/api/settings/speed`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+
+            if (response.ok) {
+                showNotification('Успех', 'Настройки сохранены', 'success');
+                addLog('Настройки скорости обновлены', 'info');
+                closeSettingsModal();
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Ошибка сохранения настроек');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка сохранения настроек: ${error.message}`, 'error');
+        }
+    }
+
+    async function saveWallet() {
+        try {
+            const chain = ui.walletChain.value;
+            const walletData = {
+                address: ui.walletAddress.value.trim(),
+                name: ui.walletName.value.trim(),
+                notes: ui.walletNotes.value.trim()
+            };
+
+            // Add Solana-specific fields
+            if (chain === 'solana') {
+                walletData.category = ui.walletCategory.value;
+                if (ui.walletWinrate.value) {
+                    walletData.estimated_win_rate = parseFloat(ui.walletWinrate.value);
+                }
+                walletData.specialization = [walletData.category];
+            }
+
+            // Validation
+            if (!walletData.address || !walletData.name) {
+                throw new Error('Адрес и название кошелька обязательны');
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/wallets/${chain}/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(walletData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                showNotification('Успех', `Кошелек добавлен в ${chain}`, 'success');
+                addLog(`Добавлен кошелек ${walletData.name} в ${chain}`, 'success');
+                closeAddWalletModal();
+                fetchWallets(); // Refresh wallet list
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Ошибка добавления кошелька');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка добавления кошелька: ${error.message}`, 'error');
+        }
+    }
+
+    // Event listeners for modals
+    ui.settingsBtn.addEventListener('click', openSettingsModal);
+    ui.closeSettings.addEventListener('click', closeSettingsModal);
+    ui.saveSettings.addEventListener('click', saveSettings);
+    
+    ui.addWalletBtn.addEventListener('click', openAddWalletModal);
+    ui.closeAddWallet.addEventListener('click', closeAddWalletModal);
+    ui.walletChain.addEventListener('change', updateWalletFormFields);
+    ui.saveWallet.addEventListener('click', saveWallet);
+    
+    document.getElementById('cancel-add-wallet').addEventListener('click', closeAddWalletModal);
+    document.getElementById('reset-settings').addEventListener('click', loadCurrentSettings);
+
+    // Close modals on outside click
+    ui.settingsModal.addEventListener('click', (e) => {
+        if (e.target === ui.settingsModal) closeSettingsModal();
+    });
+    ui.addWalletModal.addEventListener('click', (e) => {
+        if (e.target === ui.addWalletModal) closeAddWalletModal();
+    });
+
+    function renderWallets(wallets, type) {
+        if (!wallets || wallets.length === 0) {
+            ui.walletsContent.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <i data-lucide="wallet-x" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p>Нет ${type === 'eth' ? 'ETH' : 'Solana'} кошельков</p>
+                </div>
+            `;
+            return;
+        }
+
+        const walletsHtml = wallets.map(wallet => `
+            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 hover:border-sky-500 transition-all">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium text-white text-sm">${wallet.name}</span>
+                    <span class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">${wallet.category || 'unknown'}</span>
+                </div>
+                <p class="text-xs text-gray-400 font-mono">${wallet.address}</p>
+                ${wallet.estimated_win_rate ? `
+                    <div class="mt-2 flex justify-between text-xs">
+                        <span class="text-gray-400">Win Rate:</span>
+                        <span class="text-green-400 font-medium">${(wallet.estimated_win_rate * 100).toFixed(1)}%</span>
+                    </div>
+                ` : ''}
+                <div class="mt-2 flex space-x-2">
+                    <button onclick="removeWallet('${type}', '${wallet.address}')" class="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        ui.walletsContent.innerHTML = walletsHtml;
+        lucide.createIcons();
+    }
+
+    // Global function for removing wallets
+    window.removeWallet = async function(chain, address) {
+        if (!confirm('Вы уверены, что хотите удалить этот кошелек?')) {
+            return;
+        }
+
+        try {
+            const chainName = chain === 'eth' ? 'eth' : 'solana';
+            const response = await fetch(`${API_BASE_URL}/api/wallets/${chainName}/${address}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showNotification('Успех', 'Кошелек удален', 'success');
+                addLog(`Удален кошелек ${address.slice(0, 10)}... из ${chainName}`, 'warning');
+                fetchWallets(); // Refresh wallet list
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Ошибка удаления кошелька');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка удаления кошелька: ${error.message}`, 'error');
+        }
+    };
+
+    // Modal functions
+    function openSettingsModal() {
+        ui.settingsModal.classList.remove('hidden');
+        ui.settingsModal.classList.add('flex');
+        loadCurrentSettings();
+    }
+
+    function closeSettingsModal() {
+        ui.settingsModal.classList.add('hidden');
+        ui.settingsModal.classList.remove('flex');
+    }
+
+    function openAddWalletModal() {
+        ui.addWalletModal.classList.remove('hidden');
+        ui.addWalletModal.classList.add('flex');
+        updateWalletFormFields();
+    }
+
+    function closeAddWalletModal() {
+        ui.addWalletModal.classList.add('hidden');
+        ui.addWalletModal.classList.remove('flex');
+        resetWalletForm();
+    }
+
+    function updateWalletFormFields() {
+        const chain = ui.walletChain.value;
+        if (chain === 'solana') {
+            ui.solanaFields.style.display = 'block';
+        } else {
+            ui.solanaFields.style.display = 'none';
+        }
+    }
+
+    function resetWalletForm() {
+        ui.walletAddress.value = '';
+        ui.walletName.value = '';
+        ui.walletCategory.value = 'meme_trader';
+        ui.walletWinrate.value = '';
+        ui.walletNotes.value = '';
+    }
+
+    async function loadCurrentSettings() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/settings`);
+            if (response.ok) {
+                const settings = await response.json();
+                
+                // Data Collector settings
+                const dc = settings.processing_speed?.dex_data_collector || {};
+                document.getElementById('dc-rpc-delay').value = dc.rpc_delay || 0.2;
+                document.getElementById('dc-batch-size').value = dc.batch_size || 50;
+                document.getElementById('dc-batch-delay').value = dc.delay_between_batches || 1.0;
+                document.getElementById('dc-max-transactions').value = dc.max_transactions_per_wallet || 1000;
+                
+                // DEX Follower settings
+                const df = settings.processing_speed?.dex_follower || {};
+                document.getElementById('df-rpc-delay').value = df.rpc_delay || 0.1;
+                document.getElementById('df-monitor-interval').value = df.monitor_interval || 20;
+                
+                // Whale Follower settings
+                const wf = settings.processing_speed?.whale_follower || {};
+                document.getElementById('wf-etherscan-delay').value = wf.etherscan_delay || 0.25;
+                document.getElementById('wf-monitor-interval').value = wf.monitor_interval || 30;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки настроек:', error);
+            showNotification('Ошибка', 'Не удалось загрузить настройки', 'error');
+        }
+    }
+
+    async function saveSettings() {
+        try {
+            const settings = {
+                data_collector: {
+                    rpc_delay: parseFloat(document.getElementById('dc-rpc-delay').value),
+                    batch_size: parseInt(document.getElementById('dc-batch-size').value),
+                    batch_delay: parseFloat(document.getElementById('dc-batch-delay').value),
+                    max_transactions: parseInt(document.getElementById('dc-max-transactions').value)
+                },
+                dex_follower: {
+                    rpc_delay: parseFloat(document.getElementById('df-rpc-delay').value),
+                    monitor_interval: parseInt(document.getElementById('df-monitor-interval').value)
+                },
+                whale_follower: {
+                    etherscan_delay: parseFloat(document.getElementById('wf-etherscan-delay').value),
+                    monitor_interval: parseInt(document.getElementById('wf-monitor-interval').value)
+                }
+            };
+
+            const response = await fetch(`${API_BASE_URL}/api/settings/speed`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+
+            if (response.ok) {
+                showNotification('Успех', 'Настройки сохранены', 'success');
+                addLog('Настройки скорости обновлены', 'info');
+                closeSettingsModal();
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Ошибка сохранения настроек');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка сохранения настроек: ${error.message}`, 'error');
+        }
+    }
+
+    async function saveWallet() {
+        try {
+            const chain = ui.walletChain.value;
+            const walletData = {
+                address: ui.walletAddress.value.trim(),
+                name: ui.walletName.value.trim(),
+                notes: ui.walletNotes.value.trim()
+            };
+
+            // Add Solana-specific fields
+            if (chain === 'solana') {
+                walletData.category = ui.walletCategory.value;
+                if (ui.walletWinrate.value) {
+                    walletData.estimated_win_rate = parseFloat(ui.walletWinrate.value);
+                }
+                walletData.specialization = [walletData.category];
+            }
+
+            // Validation
+            if (!walletData.address || !walletData.name) {
+                throw new Error('Адрес и название кошелька обязательны');
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/wallets/${chain}/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(walletData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                showNotification('Успех', `Кошелек добавлен в ${chain}`, 'success');
+                addLog(`Добавлен кошелек ${walletData.name} в ${chain}`, 'success');
+                closeAddWalletModal();
+                fetchWallets(); // Refresh wallet list
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Ошибка добавления кошелька');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка добавления кошелька: ${error.message}`, 'error');
+        }
+    }
+
+    // Event listeners for modals
+    ui.settingsBtn.addEventListener('click', openSettingsModal);
+    ui.closeSettings.addEventListener('click', closeSettingsModal);
+    ui.saveSettings.addEventListener('click', saveSettings);
+    
+    ui.addWalletBtn.addEventListener('click', openAddWalletModal);
+    ui.closeAddWallet.addEventListener('click', closeAddWalletModal);
+    ui.walletChain.addEventListener('change', updateWalletFormFields);
+    ui.saveWallet.addEventListener('click', saveWallet);
+    
+    document.getElementById('cancel-add-wallet').addEventListener('click', closeAddWalletModal);
+    document.getElementById('reset-settings').addEventListener('click', loadCurrentSettings);
+
+    function renderRecentTransactions(transactions) {
+        if (!transactions || transactions.length === 0) {
+            ui.recentTransactions.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <i data-lucide="activity" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p>Нет недавних транзакций</p>
+                </div>
+            `;
+            return;
+        }
+
+        const transactionsHtml = transactions.map(tx => `
+            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium text-white text-sm">${tx.type || 'Unknown'}</span>
+                    <span class="text-xs text-gray-400">${tx.timestamp}</span>
+                </div>
+                <p class="text-xs text-gray-400">${tx.description}</p>
+                <div class="flex justify-between mt-2 text-xs">
+                    <span class="text-gray-400">Wallet: ${tx.wallet?.slice(0, 8)}...</span>
+                    <span class="text-sky-400">${tx.chain}</span>
+                </div>
+            </div>
+        `).join('');
+
+        ui.recentTransactions.innerHTML = transactionsHtml;
+    }
+
+    // Tab switching
+    ui.tabEth.addEventListener('click', () => {
+        currentTab = 'eth';
+        ui.tabEth.classList.add('active', 'bg-sky-500', 'text-white');
+        ui.tabEth.classList.remove('text-gray-400');
+        ui.tabSol.classList.remove('active', 'bg-sky-500', 'text-white');
+        ui.tabSol.classList.add('text-gray-400');
+        fetchWallets();
+    });
+
+    ui.tabSol.addEventListener('click', () => {
+        currentTab = 'sol';
+        ui.tabSol.classList.add('active', 'bg-sky-500', 'text-white');
+        ui.tabSol.classList.remove('text-gray-400');
+        ui.tabEth.classList.remove('active', 'bg-sky-500', 'text-white');
+        ui.tabEth.classList.add('text-gray-400');
+        fetchWallets();
+    });
+
+    // Button events
+    ui.startAllBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/services/start-all`, { method: 'POST' });
+            if (response.ok) {
+                showNotification('Успех', 'Все сервисы запущены', 'success');
+                addLog('Запуск всех сервисов', 'success');
+            } else {
+                throw new Error('Ошибка запуска сервисов');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка запуска: ${error.message}`, 'error');
+        }
+    });
+
+    ui.stopAllBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/services/stop-all`, { method: 'POST' });
+            if (response.ok) {
+                showNotification('Успех', 'Все сервисы остановлены', 'success');
+                addLog('Остановка всех сервисов', 'warning');
+            } else {
+                throw new Error('Ошибка остановки сервисов');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка остановки: ${error.message}`, 'error');
+        }
+    });
+
+    ui.collectDataBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/data-collection/start`, { method: 'POST' });
+            if (response.ok) {
+                showNotification('Сбор данных', 'Начат сбор исторических данных', 'info');
+                addLog('Запуск сбора исторических данных', 'info');
+            } else {
+                throw new Error('Ошибка запуска сбора данных');
+            }
+        } catch (error) {
+            showNotification('Ошибка', error.message, 'error');
+            addLog(`Ошибка сбора данных: ${error.message}`, 'error');
+        }
+    });
+
+    // API Functions
+    async function fetchStatus() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/status`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Update connection status
+            ui.connectionStatus.innerHTML = `
+                <div class="w-3 h-3 rounded-full bg-green-500 pulse-green"></div>
+                <span class="text-green-400 font-medium">Подключено</span>
+            `;
+            
+            // Update service statuses
+            updateServiceStatus('whale', data.services?.whale_follower?.active || false, {
+                wallets: data.services?.whale_follower?.wallets_count,
+                transactions: data.services?.whale_follower?.processed_transactions,
+                autoTrade: data.services?.whale_follower?.auto_trade_enabled
+            });
+            
+            updateServiceStatus('dex', data.services?.dex_follower?.active || false, {
+                wallets: data.services?.dex_follower?.wallets_count,
+                transactions: data.services?.dex_follower?.processed_transactions,
+                memeCoins: data.services?.dex_follower?.meme_purchases
+            });
+            
+            updateServiceStatus('collector', data.services?.data_collector?.active || false, {
+                completedWallets: data.services?.data_collector?.completed_wallets,
+                totalTransactions: data.services?.data_collector?.total_transactions,
+                status: data.services?.data_collector?.status
+            });
+            
+            // Update chart data
+            if (data.analytics?.activity_data) {
+                updateActivityChart(data.analytics.activity_data);
+            }
+            
+            // Update recent transactions
+            if (data.recent_transactions) {
+                renderRecentTransactions(data.recent_transactions);
+            }
+            
+            // Update logs
+            if (data.recent_logs) {
+                data.recent_logs.forEach(log => addLog(log.message, log.type));
+            }
+            
+        } catch (error) {
+            console.error('Ошибка получения статуса:', error);
+            ui.connectionStatus.innerHTML = `
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <span class="text-red-400 font-medium">Ошибка подключения</span>
+            `;
+            
+            // Set all services as offline
+            updateServiceStatus('whale', false);
+            updateServiceStatus('dex', false);
+            updateServiceStatus('collector', false);
+        }
+    }
+
+    async function fetchWallets() {
+        try {
+            const endpoint = currentTab === 'eth' ? '/api/wallets/eth' : '/api/wallets/solana';
+            const response = await fetch(`${API_BASE_URL}${endpoint}`);
+            
+            if (response.ok) {
+                const wallets = await response.json();
+                renderWallets(wallets, currentTab);
+            } else {
+                throw new Error('Ошибка загрузки кошельков');
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки кошельков:', error);
+            ui.walletsContent.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <i data-lucide="wifi-off" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p>Ошибка загрузки кошельков</p>
+                </div>
+            `;
+        }
+    }
+
+    function updateActivityChart(data) {
+        if (!data || !data.labels) return;
+        
+        activityChart.data.labels = data.labels;
+        activityChart.data.datasets[0].data = data.eth_transactions || [];
+        activityChart.data.datasets[1].data = data.solana_transactions || [];
+        activityChart.update('none');
+    }
+
+    // Initialize CSS for active tab
+    function initializeTabs() {
+        ui.tabEth.classList.add('active', 'bg-sky-500', 'text-white');
+        ui.tabSol.classList.add('text-gray-400');
+    }
+
+    // Initialize app
+    function initializeApp() {
+        addLog('Инициализация Whale Signal Dashboard...', 'info');
+        initializeTabs();
+        fetchStatus();
+        fetchWallets();
+        
+        // Set up intervals
+        setInterval(fetchStatus, 5000); // Update status every 5 seconds
+        setInterval(() => {
+            if (currentTab) fetchWallets();
+        }, 30000); // Update wallets every 30 seconds
+    }
+
+    // Start the application
+    initializeApp();
+});
+</script>
+
+<style>
+.tab-button {
+    transition: all 0.3s ease;
+}
+.tab-button.active {
+    background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+    color: white;
+}
+.tab-button:not(.active) {
+    color: #9ca3af;
+    background: rgba(255, 255, 255, 0.05);
+}
+.tab-button:not(.active):hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #d1d5db;
+}
+</style>
+
+</body>
+</html>

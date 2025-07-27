@@ -1,0 +1,41 @@
+FROM python:3.11-slim
+
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Создаем пользователя приложения
+RUN useradd --create-home --shell /bin/bash whale
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем файлы зависимостей
+COPY requirements.txt .
+
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Копируем код приложения
+COPY . .
+
+# Создаем необходимые директории
+RUN mkdir -p config data logs data/historical data/paper_trading && \
+    chown -R whale:whale /app
+
+# Переключаемся на пользователя приложения
+USER whale
+
+# Открываем порт
+EXPOSE 8000
+
+# Переменные окружения
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Команда запуска
+CMD ["python", "web_server.py"]

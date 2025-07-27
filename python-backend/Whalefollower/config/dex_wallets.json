@@ -1,0 +1,26 @@
+[
+  {
+    "address": "Dw95gaRQtSo1yzCy8DjUjmnXoRthHWa6Rj3NX17dUuoV",
+    "name": "Vine Top",
+    "notes": "",
+    "category": "meme_trader",
+    "specialization": [
+      "meme_trader"
+    ],
+    "added_at": "2025-07-27T22:57:01.909501",
+    "added_via": "web_interface",
+    "estimated_win_rate": 0.5
+  },
+  {
+    "address": "ADj7cSMTyoB4cyx2puLN5uTyzZDJdtwQ1KxST5GRtkTL",
+    "name": "debt coin",
+    "notes": "",
+    "category": "meme_trader",
+    "specialization": [
+      "meme_trader"
+    ],
+    "added_at": "2025-07-27T23:06:46.488769",
+    "added_via": "web_interface",
+    "estimated_win_rate": 0.5
+  }
+]

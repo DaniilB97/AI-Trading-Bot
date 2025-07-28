@@ -1,4 +1,4 @@
-ep(1)#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Web Server для Whale Signal Orchestrator
 Предоставляет REST API для веб-дашборда
